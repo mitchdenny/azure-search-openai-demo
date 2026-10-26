@@ -1,4 +1,7 @@
 {
+  "docs": [
+    "ALMOST.md"
+  ],
   "appHost": {
     "path": "apphost.mts",
     "language": "typescript/nodejs"
