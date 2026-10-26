@@ -100,7 +100,11 @@ Python reload and Vite HMR are enabled. Changing AppHost/configuration requires 
 
 After authorized provisioning, copy `.env.example` to `.env` for the standalone
 ingestion utility and fill in the actual Storage, Search and OpenAI account names
-from the provisioned resources. The deployment, index and container defaults match
+from the provisioned resources. Set `AZURE_OPENAI_ENDPOINT` to the actual endpoint
+shown as `CHAT_URI` in the backend resource's environment in the Aspire dashboard,
+for example `https://<actual-subdomain>.openai.azure.com/`. Do not infer the endpoint
+from the resource name. Keep `OPENAI_HOST=azure` from the example.
+The deployment, index and container defaults match
 the AppHost. Do not change embedding model/dimensions independently of the index.
 With Azure access, data mutation and model usage authorized:
 
@@ -114,9 +118,19 @@ Document Intelligence but can lose advanced layout/image extraction. For full ex
 provide `AZURE_DOCUMENTINTELLIGENCE_SERVICE` and disable the corresponding local parser.
 Embeddings still call a real model. Use a fresh index/container for experiments.
 The script can create/update an index and upload content; it never runs automatically.
+Wait for ingestion to finish successfully before asking the sample questions.
+Resource-group/subscription values are optional for this local ingestion path;
+Azure CLI supplies the signed-in identity.
 MD5 sidecars are shared across configurations, so remove only the relevant `data/*.md5`
 files when deliberately ingesting unchanged documents into a new target.
 See [ingestion architecture and options](data_ingestion.md).
+
+If chat reports `ResourceNotFoundError` and backend logs say
+`The index 'gptkbindex' ... was not found`, the Search service exists but ingestion
+has not created the index. This is not an OpenAI model compatibility failure.
+Complete the authorized ingestion above; restarting the backend or retrying the chat
+does not create the index. A streamed chat request can return HTTP 200 with an error
+event in its body, so inspect the UI and downstream Search spans, not just HTTP status.
 
 Cloud ingestion remains optional: configure separately deployed Functions, run
 `python scripts/copy_prepdocslib.py`, and invoke

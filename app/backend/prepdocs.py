@@ -218,7 +218,7 @@ if __name__ == "__main__":  # pragma: no cover
         index_name=os.environ["AZURE_SEARCH_INDEX"],
         use_agentic_knowledgebase=use_agentic_knowledgebase,
         knowledgebase_name=os.getenv("AZURE_SEARCH_KNOWLEDGEBASE_NAME"),
-        azure_openai_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+        azure_openai_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
         azure_openai_knowledgebase_deployment=os.getenv("AZURE_OPENAI_KNOWLEDGEBASE_DEPLOYMENT"),
         azure_openai_knowledgebase_model=os.getenv("AZURE_OPENAI_KNOWLEDGEBASE_MODEL"),
         azure_credential=azure_credential,
@@ -246,8 +246,8 @@ if __name__ == "__main__":  # pragma: no cover
         azure_credential=azure_credential,
         storage_account=os.environ["AZURE_STORAGE_ACCOUNT"],
         storage_container=os.environ["AZURE_STORAGE_CONTAINER"],
-        storage_resource_group=os.environ["AZURE_STORAGE_RESOURCE_GROUP"],
-        subscription_id=os.environ["AZURE_SUBSCRIPTION_ID"],
+        storage_resource_group=os.getenv("AZURE_STORAGE_RESOURCE_GROUP"),
+        subscription_id=os.getenv("AZURE_SUBSCRIPTION_ID"),
         storage_key=clean_key_if_exists(args.storagekey),
         image_storage_container=os.environ.get("AZURE_IMAGESTORAGE_CONTAINER"),  # Pass the image container
     )
@@ -265,6 +265,7 @@ if __name__ == "__main__":  # pragma: no cover
         openai_host=OPENAI_HOST,
         azure_credential=azure_credential,
         azure_openai_service=os.getenv("AZURE_OPENAI_SERVICE"),
+        azure_openai_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
         azure_openai_custom_url=os.getenv("AZURE_OPENAI_CUSTOM_URL"),
         azure_openai_api_key=os.getenv("AZURE_OPENAI_API_KEY_OVERRIDE"),
         openai_api_key=clean_key_if_exists(os.getenv("OPENAI_API_KEY")),

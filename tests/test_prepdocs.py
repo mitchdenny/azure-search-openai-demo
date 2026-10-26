@@ -1,6 +1,9 @@
 import logging
+import os
+import runpy
+import sys
 from argparse import Namespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import openai
 import openai.types
@@ -17,6 +20,49 @@ from .mocks import (
     MOCK_EMBEDDING_MODEL_NAME,
     MockAzureCredential,
 )
+
+
+@pytest.mark.parametrize("endpoint", [None, "https://actual-subdomain.openai.azure.com/"])
+def test_prepdocs_cli_azure_setup(monkeypatch, endpoint):
+    import prepdocslib.servicesetup as servicesetup
+
+    env = {
+        "OPENAI_HOST": "azure",
+        "AZURE_SEARCH_SERVICE": "search-service",
+        "AZURE_SEARCH_INDEX": "gptkbindex",
+        "AZURE_STORAGE_ACCOUNT": "storage-account",
+        "AZURE_STORAGE_CONTAINER": "content",
+        "AZURE_OPENAI_SERVICE": "openai-resource",
+        "AZURE_OPENAI_EMB_MODEL_NAME": "text-embedding-3-small",
+        "AZURE_OPENAI_EMB_DEPLOYMENT": "embeddings",
+        "USE_LOCAL_PDF_PARSER": "true",
+        "USE_LOCAL_HTML_PARSER": "true",
+    }
+    if endpoint is not None:
+        env["AZURE_OPENAI_ENDPOINT"] = endpoint
+    monkeypatch.setattr(os, "environ", env)
+    monkeypatch.setattr(sys, "argv", ["prepdocs.py", "data/*"])
+    monkeypatch.setattr("dotenv.load_dotenv", lambda **kwargs: None)
+    monkeypatch.setattr("azure.identity.aio.AzureCliCredential", lambda **kwargs: AsyncMock())
+    session = MagicMock()
+    session.__aenter__.return_value = session
+    session.get.return_value.__aenter__.return_value.status = 200
+    monkeypatch.setattr("aiohttp.ClientSession", lambda: session)
+    client_factory = MagicMock(return_value=AsyncMock())
+    monkeypatch.setattr(servicesetup, "AsyncOpenAI", client_factory)
+    blob_factory = MagicMock(return_value=AsyncMock())
+    monkeypatch.setattr(servicesetup, "setup_blob_manager", blob_factory)
+    strategy = AsyncMock()
+    monkeypatch.setattr("prepdocslib.filestrategy.FileStrategy", lambda **kwargs: strategy)
+
+    runpy.run_path("app/backend/prepdocs.py", run_name="__main__")
+
+    expected_endpoint = endpoint or "https://openai-resource.openai.azure.com"
+    assert client_factory.call_args.kwargs["base_url"] == f"{expected_endpoint.rstrip('/')}/openai/v1"
+    assert blob_factory.call_args.kwargs["storage_resource_group"] is None
+    assert blob_factory.call_args.kwargs["subscription_id"] is None
+    strategy.setup.assert_awaited_once()
+    strategy.run.assert_awaited_once()
 
 
 class MockEmbeddingsClient:

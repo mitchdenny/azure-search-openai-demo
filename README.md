@@ -34,6 +34,10 @@ billable resources and role assignments. Run it only with authorization.
 The template uses GPT-4.1 mini and text-embedding-3-small (1536 dimensions).
 Change the resource declarations in `apphost.mts`, not a set of provider environment variables.
 Open the frontend URL in the Aspire dashboard. No frontend build is required for development.
+**Before asking the sample questions, [ingest the sample documents](docs/localdev.md#ingest-documents-explicitly).**
+Provisioning creates the Search service, not the `gptkbindex` index or its contents.
+Ingestion is a separate, explicitly authorized step that uploads documents and calls the
+embedding model; chat cannot retrieve documents until it completes.
 See [local development](docs/localdev.md) for prerequisites, permissions, ingestion,
 authentication, troubleshooting, and the limits of health checks.
 
