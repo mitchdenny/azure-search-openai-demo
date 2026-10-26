@@ -40,7 +40,7 @@ From the repository or generated application's root:
 ```sh
 npm ci
 python3 -m venv .venv
-.venv/bin/python -m pip install -r app/backend/requirements.txt
+.venv/bin/python -m pip install --index-url https://pypi.org/simple -r app/backend/requirements.txt
 npm --prefix app/frontend ci
 az login
 aspire restore
@@ -63,6 +63,9 @@ Resource references and waits make the dependencies visible in the dashboard.
 AppHost/frontend use their own npm lockfiles. Python uses the pinned
 backend requirements and root `.venv`; Aspire's pip setup and npm install resources
 ensure dependencies are present. Run the explicit setup first for reproducible installs.
+The backend installer explicitly selects public PyPI (`https://pypi.org/simple`)
+rather than an inherited default index that may lag the pinned package versions.
+This does not change machine-wide pip configuration.
 If you create `.venv` with `uv venv`, use `uv venv --seed` so the environment contains
 the `pip` executable required by Aspire's pip installer.
 Do not edit generated `.aspire/modules`.

@@ -18,7 +18,7 @@ Use Python 3.13 for the tested dependency set.
 ```sh
 npm ci
 python3 -m venv .venv
-.venv/bin/python -m pip install -r app/backend/requirements.txt
+.venv/bin/python -m pip install --index-url https://pypi.org/simple -r app/backend/requirements.txt
 npm --prefix app/frontend ci
 az login
 aspire restore

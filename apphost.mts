@@ -20,7 +20,7 @@ const embeddings = await openai.addDeployment(
 const backend = await builder
   .addUvicornApp("backend", "./app/backend", "main:app")
   .withVirtualEnvironment("../../.venv")
-  .withPip()
+  .withPip({ installArgs: ["--index-url", "https://pypi.org/simple"] })
   .withArgs(["--reload"])
   .withReference(content)
   .withReference(search)
