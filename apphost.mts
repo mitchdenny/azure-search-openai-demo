@@ -20,7 +20,19 @@ const embeddings = await openai.addDeployment(
 const backend = await builder
   .addUvicornApp("backend", "./app/backend", "main:app")
   .withVirtualEnvironment("../../.venv", { createIfNotExists: false })
-  .withPip({ installArgs: ["--index-url", "https://pypi.org/simple"] })
+  .withUv({
+    args: [
+      "sync",
+      "--locked",
+      "--inexact",
+      "--project",
+      "../..",
+      "--python",
+      "3.13",
+      "--default-index",
+      "https://pypi.org/simple",
+    ],
+  })
   .withArgs(["--reload"])
   .withReference(content)
   .withReference(search)
@@ -53,7 +65,7 @@ const backend = await builder
 await builder
   .addPythonApp("ingest", "./app/backend", "prepdocs.py")
   .withVirtualEnvironment("../../.venv", { createIfNotExists: false })
-  .withPip({ install: false })
+  .withUv({ install: false })
   .withArgs(["../../data/*", "--verbose", "--no-env-file"])
   .withReference(content)
   .withReference(search)

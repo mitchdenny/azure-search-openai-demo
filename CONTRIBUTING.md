@@ -40,12 +40,15 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 Install the development dependencies:
 
 ```shell
-python3.13 -m venv .venv
+uv sync --locked --default-index https://pypi.org/simple
 source .venv/bin/activate
-python -m pip install -r requirements-dev.txt
+uv pip install -r requirements-dev.txt
 ```
 
 For application startup and Azure prerequisites, use [Aspire local development](docs/localdev.md).
+Install uv first; it creates `.venv` with Python 3.13 automatically. Aspire preserves
+the extra development tools when synchronizing the locked runtime dependencies.
+See [dependency maintenance](docs/localdev.md#updating-python-dependencies) before changing Python packages.
 
 Install the pre-commit hooks:
 
@@ -114,7 +117,7 @@ For Python, you can enforce the conventions using `ruff` and `black`.
 Install the development dependencies:
 
 ```shell
-python -m pip install -r requirements-dev.txt
+uv pip install -r requirements-dev.txt
 ```
 
 Run `ruff` to lint a file:

@@ -35,12 +35,12 @@ requires explicit resource declarations and backend wiring in the AppHost.
 
 ## Setup and lifecycle
 
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) alongside Aspire,
+Node.js and Azure CLI first. A separate Python installation is optional.
 From the repository or generated application's root:
 
 ```sh
 npm ci
-python3.13 -m venv .venv
-.venv/bin/python -m pip install --index-url https://pypi.org/simple -r app/backend/requirements.txt
 npm --prefix app/frontend ci
 az login
 aspire restore
@@ -51,9 +51,8 @@ aspire wait frontend --apphost apphost.mts
 aspire describe --apphost apphost.mts
 ```
 
-On Windows create the environment with `py -3.13 -m venv .venv` and use
-`.venv\Scripts\python.exe`. Alternatively use foreground
-`aspire run --isolated --apphost apphost.mts`. Stop only this app:
+The same setup works on Windows; no manual virtual-environment creation is required.
+Alternatively use foreground `aspire run --isolated --apphost apphost.mts`. Stop only this app:
 
 ```sh
 aspire stop --non-interactive --apphost apphost.mts
@@ -65,17 +64,25 @@ Resource references and waits make the dependencies visible in the dashboard.
 The backend uses `CHAT_URI` from the chat deployment reference as the Azure OpenAI
 endpoint. Azure's endpoint hostname can differ from the resource name; do not
 reconstruct it from `AZURE_OPENAI_SERVICE`.
-AppHost/frontend use their own npm lockfiles. Python uses the pinned
-backend requirements and root `.venv`; Aspire's pip setup and npm install resources
-ensure dependencies are present. Run the explicit setup first for reproducible installs.
-The backend installer explicitly selects public PyPI (`https://pypi.org/simple`)
-rather than an inherited default index that may lag the pinned package versions.
-This does not change machine-wide pip configuration.
-If you create `.venv` with `uv venv`, use `uv venv --seed` so the environment contains
-the `pip` executable required by Aspire's pip installer.
-`.python-version` selects Python 3.13 for uv/pyenv. Aspire requires the environment
-to be created explicitly instead of automatically choosing the system's `python3`.
+AppHost/frontend use their own npm lockfiles. Aspire's native uv backend installer
+runs `uv sync --locked --inexact --project ../.. --python 3.13 --default-index https://pypi.org/simple`
+from `app/backend`. It creates the root `.venv`, installs `uv.lock`, and finishes before
+the backend starts. The ingestion resource reuses that environment without a second install.
+`--inexact` preserves separately installed development tools while enforcing locked runtime
+versions. No `pip` executable is required in the environment.
+The project metadata and `.python-version` select Python 3.13. uv uses a compatible
+installation or automatically downloads one, rather than using an arbitrary system
+Python. First startup therefore requires network access for packages and possibly Python.
+The installer explicitly selects public PyPI instead of an inherited stale index; it
+does not change machine-wide package-manager configuration.
 Do not edit generated `.aspire/modules`.
+
+Vite and Uvicorn ports are assigned by Aspire. Vite receives `BACKEND_URL` from the
+backend endpoint and proxies API requests, preserving one browser origin for authentication,
+uploads and citations. Both services use loopback HTTP locally. The dashboard has its own
+HTTPS configuration; generated copies receive new dashboard ports. In the same source
+checkout, dashboard profile ports can be adjusted in `aspire.config.json` if necessary.
+Python reload and Vite HMR are enabled. Changing AppHost/configuration requires restarting it.
 
 ### Installer failures after changing Python
 
@@ -85,17 +92,29 @@ The pinned native dependencies are tested on Python 3.13; on Python 3.15,
 `jiter` and `tiktoken` can fail to build because their PyO3 versions do not support
 that interpreter. Do not bypass PyO3's compatibility checks.
 
-Stop this app before replacing an environment used by running Python resources.
-Move the old `.venv` aside, create a fresh one using the setup commands above, and
-restart the app. Retrying the installer alone does not change its Python interpreter.
-The old environment can be removed after confirming the replacement works.
+Stop this app before changing an environment used by running Python resources.
+uv replaces an incompatible `.venv` with a Python 3.13 environment on startup.
+Move the old environment aside first if you need to preserve its contents.
+If Python downloads are disabled by machine policy, install Python 3.13 separately
+or run `uv python install 3.13` with the required network access. Do not force uv to
+use an unsupported interpreter. A stale nested `app/backend/.venv` is not used.
 
-Vite and Uvicorn ports are assigned by Aspire. Vite receives `BACKEND_URL` from the
-backend endpoint and proxies API requests, preserving one browser origin for authentication,
-uploads and citations. Both services use loopback HTTP locally. The dashboard has its own
-HTTPS configuration; generated copies receive new dashboard ports. In the same source
-checkout, dashboard profile ports can be adjusted in `aspire.config.json` if necessary.
-Python reload and Vite HMR are enabled. Changing AppHost/configuration requires restarting it.
+### Updating Python dependencies
+
+Keep direct requirements in `app/backend/requirements.in` and the root project's
+`dependencies` synchronized. The tests check that these declarations agree.
+`app/backend/requirements.txt` remains the pinned compatibility input for standalone
+tools and cloud Functions. After intentionally editing requirements, compile it from
+`app/backend` using `uv pip compile requirements.in -o requirements.txt --python-version 3.10`.
+Then update the root project and uv lock without changing an active environment:
+
+```sh
+uv add --raw --no-sync -r app/backend/requirements.in -c app/backend/requirements.txt \
+  --default-index https://pypi.org/simple --python 3.13
+```
+
+When removing a dependency, remove it from both direct declarations before regenerating.
+Use `--upgrade-package <package>` only for an intentional upgrade. Commit both lockfiles.
 
 ## Ingest documents explicitly
 
@@ -174,6 +193,7 @@ See [authentication](login_and_acl.md) for separate Entra/OBO verification.
 ## Tests
 
 ```sh
+uv sync --locked --default-index https://pypi.org/simple
 source .venv/bin/activate
 uv pip install -r requirements-dev.txt
 npm --prefix app/frontend run build

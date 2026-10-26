@@ -1,3 +1,53 @@
+[project]
+name = "searchopenai"
+version = "0.1.0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "aiohttp",
+    "azure-ai-documentintelligence==1.0.2",
+    "azure-cognitiveservices-speech",
+    "azure-cosmos",
+    "azure-functions>=1.24.0",
+    "azure-identity",
+    "azure-monitor-opentelemetry",
+    "azure-search-documents==12.1.0b1",
+    "azure-storage-blob",
+    "azure-storage-file-datalake",
+    "beautifulsoup4",
+    "cryptography",
+    "jinja2",
+    "msal",
+    "msgraph-sdk",
+    "openai>=1.109.1",
+    "opentelemetry-exporter-otlp-proto-grpc",
+    "opentelemetry-instrumentation-aiohttp-client",
+    "opentelemetry-instrumentation-asgi",
+    "opentelemetry-instrumentation-httpx",
+    "opentelemetry-instrumentation-openai",
+    "pillow",
+    "pyjwt",
+    "pymupdf",
+    "pypdf",
+    "python-dotenv",
+    "quart",
+    "quart-cors",
+    "rich",
+    "tenacity",
+    "tiktoken",
+    "types-beautifulsoup4",
+    "types-pillow",
+    "typing-extensions",
+    "uvicorn",
+]
+
+[tool.uv]
+package = false
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true
+
 [tool.ruff]
 target-version = "py310"
 lint.select = ["E", "F", "I", "UP"]

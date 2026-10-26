@@ -29,8 +29,11 @@ Follow `docs/localdev.md`. Run `aspire restore` then
 a worktree; wait for backend/frontend with `aspire wait`. Stop only the exact
 AppHost you started. Never disturb other apps/worktrees.
 AppHost uses npm (`package-lock.json`); frontend has its own npm lockfile.
-Create root `.venv` with Python 3.13 before startup; Aspire does not create it
-using the system default Python. `.python-version` selects 3.13 for uv/pyenv.
+Install uv before startup. Aspire's native uv installer creates root `.venv` with
+Python 3.13 and syncs `uv.lock` from public PyPI; do not create it using system Python.
+The backend owns installation; ingestion shares its environment with uv install disabled.
+`--inexact` preserves separately installed development tools. Do not sync/prune an
+environment while resources are running. `.python-version` also selects 3.13.
 Never edit generated `.aspire/modules`. Use `aspire add` / `aspire restore`.
 Verify unfamiliar Aspire APIs with docs and generated read-only signatures.
 
@@ -86,6 +89,10 @@ Never hide failures or substitute fake success for real-service behavior.
 
 Compile backend dependencies from `app/backend`:
 `uv pip compile requirements.in -o requirements.txt --python-version 3.10`.
+Keep root `pyproject.toml` direct dependencies synchronized with `requirements.in`.
+From root, regenerate the uv lock without syncing an active environment:
+`uv add --raw --no-sync -r app/backend/requirements.in -c app/backend/requirements.txt --default-index https://pypi.org/simple --python 3.13`.
+Commit both lockfiles; requirements.txt remains the compatibility input for Functions.
 Use `--upgrade-package <package>` only for an intentional upgrade.
 Frontend changes use its npm lockfile and `npm run build`. MSAL upgrades require
 manual popup, redirect bridge, OBO and ACL checks described in `docs/login_and_acl.md`.

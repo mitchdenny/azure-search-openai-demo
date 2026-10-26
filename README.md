@@ -12,23 +12,22 @@ This is not an offline demo and does not replace real model/retrieval calls with
 
 ## Run locally
 
-Install Aspire 13.6.4+, Node.js 22.13+ (or 24+), Python 3.13, and Azure CLI.
-The pinned dependency set is tested with Python 3.13, not arbitrary newer releases.
+Install Aspire 13.6.4+, Node.js 22.13+ (or 24+), [uv](https://docs.astral.sh/uv/getting-started/installation/),
+and Azure CLI. uv selects or downloads Python 3.13; you do not need to create a virtual
+environment or change your system Python.
 
 ```sh
 npm ci
-python3.13 -m venv .venv
-.venv/bin/python -m pip install --index-url https://pypi.org/simple -r app/backend/requirements.txt
 npm --prefix app/frontend ci
 az login
 aspire restore
 aspire run --isolated --apphost apphost.mts
 ```
 
-On Windows, use `.venv\Scripts\python.exe`.
-Create the environment with `py -3.13 -m venv .venv` on Windows.
-Aspire uses this pre-created environment; it does not create one with the system's
-default Python. `.python-version` also selects 3.13 for tools such as uv and pyenv.
+Aspire's backend installer creates the root `.venv` and installs `uv.lock` from public
+PyPI before starting the backend. Ingestion reuses that environment. Python is constrained
+to 3.13, regardless of newer or older system interpreters. First startup needs network
+access for packages and, if necessary, the Python download.
 Startup uses Aspire's Azure subscription/location configuration and can provision
 billable resources and role assignments. Run it only with authorization.
 The template uses GPT-4.1 mini and text-embedding-3-small (1536 dimensions).
