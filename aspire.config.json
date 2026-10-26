@@ -1,7 +1,7 @@
 {
-  "docs": [
-    "ALMOST.md"
-  ],
+  "docs": {
+    "llmsTxtUrl": "ALMOST.md"
+  },
   "appHost": {
     "path": "apphost.mts",
     "language": "typescript/nodejs"
