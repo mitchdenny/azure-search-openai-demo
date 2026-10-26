@@ -1,3 +1,5 @@
+import hashlib
+import json
 import logging
 from typing import Optional
 
@@ -74,6 +76,7 @@ class FileStrategy(Strategy):
         enforce_access_control: bool = False,
         use_web_source: bool = False,
         use_sharepoint_source: bool = False,
+        skip_ingested: bool = False,
     ):
         self.list_file_strategy = list_file_strategy
         self.blob_manager = blob_manager
@@ -90,6 +93,64 @@ class FileStrategy(Strategy):
         self.enforce_access_control = enforce_access_control
         self.use_web_source = use_web_source
         self.use_sharepoint_source = use_sharepoint_source
+        self.skip_ingested = skip_ingested
+
+    def ingestion_fingerprint(self, file: File) -> str:
+        processor = self.file_processors.get(file.file_extension().lower())
+        settings = {
+            "version": 1,
+            "search_endpoint": self.search_info.endpoint,
+            "search_index": self.search_info.index_name,
+            "embedding_field": self.search_field_name_embedding,
+            "embeddings": (
+                {
+                    "endpoint": self.embeddings.azure_endpoint,
+                    "deployment": self.embeddings.azure_deployment_name,
+                    "model": self.embeddings.open_ai_model_name,
+                    "dimensions": self.embeddings.open_ai_dimensions,
+                }
+                if self.embeddings
+                else None
+            ),
+            "category": self.category,
+            "acls": file.acls,
+            "use_acls": self.use_acls,
+            "enforce_access_control": self.enforce_access_control,
+            "parser": type(processor.parser).__qualname__ if processor else None,
+            "csv_max_chars_per_page": getattr(processor.parser, "max_chars_per_page", None) if processor else None,
+            "splitter": type(processor.splitter).__qualname__ if processor else None,
+            "splitter_options": (
+                {
+                    name: getattr(processor.splitter, name, None)
+                    for name in (
+                        "max_object_length",
+                        "max_section_length",
+                        "max_tokens_per_section",
+                        "section_overlap",
+                        "semantic_overlap_percent",
+                        "sentence_search_limit",
+                    )
+                }
+                if processor
+                else None
+            ),
+        }
+        digest = hashlib.sha256(json.dumps(settings, sort_keys=True).encode("utf-8"))
+        file.content.seek(0)
+        while chunk := file.content.read(1024 * 1024):
+            digest.update(chunk)
+        file.content.seek(0)
+        return digest.hexdigest()
+
+    async def already_ingested(self, file: File, fingerprint: str) -> bool:
+        metadata = await self.blob_manager.get_ingestion_metadata(file)
+        count = metadata.get("ingestion_sections", "")
+        if metadata.get("ingestion_fingerprint") != fingerprint or not count.isdecimal():
+            return False
+        section_count = int(count)
+        ids = await self.search_manager.get_content_ids(file)
+        prefix = f"{file.filename_to_id()}-page-"
+        return len(ids) == section_count and all(f"{prefix}{index}" in ids for index in range(section_count))
 
     def setup_search_manager(self):
         self.search_manager = SearchManager(
@@ -122,8 +183,17 @@ class FileStrategy(Strategy):
         self.setup_search_manager()
         if self.document_action == DocumentAction.Add:
             files = self.list_file_strategy.list()
+            processed = 0
+            skipped = 0
             async for file in files:
                 try:
+                    fingerprint = self.ingestion_fingerprint(file) if self.skip_ingested else None
+                    if fingerprint is not None and await self.already_ingested(file, fingerprint):
+                        logger.info(
+                            "Skipping '%s': unchanged content is already uploaded and indexed.", file.filename()
+                        )
+                        skipped += 1
+                        continue
                     blob_url = await self.blob_manager.upload_blob(file)
                     sections = await parse_file(
                         file,
@@ -136,9 +206,17 @@ class FileStrategy(Strategy):
                     )
                     if sections:
                         await self.search_manager.update_content(sections, url=blob_url)
+                    if fingerprint is not None:
+                        await self.search_manager.remove_stale_content(file, len(sections))
+                        await self.blob_manager.mark_ingested(file, fingerprint, len(sections))
+                    processed += 1
                 finally:
                     if file:
                         file.close()
+            if self.skip_ingested:
+                if not processed and not skipped:
+                    raise ValueError("No input documents matched the ingestion file pattern.")
+                logger.info("Ingestion complete: %d processed, %d already uploaded and indexed.", processed, skipped)
         elif self.document_action == DocumentAction.Remove:
             paths = self.list_file_strategy.list_paths()
             async for path in paths:

@@ -5,6 +5,7 @@ import azure.storage.filedatalake
 import azure.storage.filedatalake.aio
 import pytest
 from azure.search.documents.aio import SearchClient
+from azure.search.documents.models import IndexingResult
 from azure.storage.filedatalake.aio import DataLakeDirectoryClient, DataLakeFileClient
 from quart.datastructures import FileStorage
 
@@ -65,6 +66,7 @@ async def test_upload_file(auth_client, monkeypatch, mock_data_lake_service_clie
 
     async def mock_upload_documents(self, documents):
         documents_uploaded.extend(documents)
+        return [IndexingResult(key=document["id"], succeeded=True) for document in documents]
 
     monkeypatch.setattr(SearchClient, "upload_documents", mock_upload_documents)
     monkeypatch.setattr(OpenAIEmbeddings, "create_embeddings", mock_create_embeddings)

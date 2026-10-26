@@ -438,6 +438,21 @@ class BlobManager(BaseBlobManager):
             raise ValueError("file.url must be set after upload")
         return unquote(file.url)
 
+    async def get_ingestion_metadata(self, file: File) -> dict[str, str]:
+        blob = self.blob_service_client.get_blob_client(self.container, file.filename())
+        try:
+            properties = await blob.get_blob_properties()
+        except ResourceNotFoundError:
+            return {}
+        return properties.metadata or {}
+
+    async def mark_ingested(self, file: File, fingerprint: str, section_count: int):
+        blob = self.blob_service_client.get_blob_client(self.container, file.filename())
+        properties = await blob.get_blob_properties()
+        metadata = dict(properties.metadata or {})
+        metadata.update(ingestion_fingerprint=fingerprint, ingestion_sections=str(section_count))
+        await blob.set_blob_metadata(metadata=metadata)
+
     async def upload_document_image(
         self,
         document_filename: str,

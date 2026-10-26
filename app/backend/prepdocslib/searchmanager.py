@@ -42,6 +42,7 @@ from azure.search.documents.indexes.models import (
 from azure.search.documents.knowledgebases.models import (
     KnowledgeRetrievalOutputMode,
 )
+from azure.search.documents.models import IndexingResult
 
 from .blobmanager import BlobManager
 from .embeddings import OpenAIEmbeddings
@@ -50,6 +51,13 @@ from .strategy import SearchInfo
 from .textsplitter import Chunk
 
 logger = logging.getLogger("scripts")
+
+
+def check_indexing_results(results: list[IndexingResult], expected_count: int):
+    failures = [result for result in results if not result.succeeded]
+    if len(results) != expected_count or failures:
+        details = "; ".join(f"{result.key}: {result.error_message}" for result in failures)
+        raise RuntimeError(f"Azure AI Search did not complete the indexing batch: {details or 'incomplete response'}")
 
 
 class Section:
@@ -650,7 +658,34 @@ class SearchManager:
                     len(documents),
                     self.search_info.index_name,
                 )
-                await search_client.upload_documents(documents)
+                results = await search_client.upload_documents(documents)
+                check_indexing_results(results, len(documents))
+
+    async def get_content_ids(self, file: File) -> set[str]:
+        filename = file.filename().replace("'", "''")
+        prefix = f"{file.filename_to_id()}-page-"
+        ids: set[str] = set()
+        skip = 0
+        async with self.search_info.create_search_client() as search_client:
+            while True:
+                results = await search_client.search(
+                    search_text="*", filter=f"sourcefile eq '{filename}'", select=["id"], top=1000, skip=skip
+                )
+                page = [document async for document in results]
+                ids.update(document["id"] for document in page if document["id"].startswith(prefix))
+                if len(page) < 1000:
+                    return ids
+                skip += len(page)
+
+    async def remove_stale_content(self, file: File, section_count: int):
+        prefix = f"{file.filename_to_id()}-page-"
+        expected_ids = {f"{prefix}{index}" for index in range(section_count)}
+        stale_ids = sorted(await self.get_content_ids(file) - expected_ids)
+        async with self.search_info.create_search_client() as search_client:
+            for start in range(0, len(stale_ids), 1000):
+                documents = [{"id": key} for key in stale_ids[start : start + 1000]]
+                results = await search_client.delete_documents(documents)
+                check_indexing_results(results, len(documents))
 
     async def remove_content(self, path: Optional[str] = None, only_oid: Optional[str] = None):
         logger.info(

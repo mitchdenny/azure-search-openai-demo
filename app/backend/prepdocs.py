@@ -51,10 +51,11 @@ def setup_list_file_strategy(
     azure_credential: AsyncTokenCredential,
     local_files: str,
     enable_global_documents: bool = False,
+    use_cache: bool = True,
 ):
     logger.info("Using local files: %s", local_files)
     list_file_strategy = LocalListFileStrategy(
-        path_pattern=local_files, enable_global_documents=enable_global_documents
+        path_pattern=local_files, enable_global_documents=enable_global_documents, use_cache=use_cache
     )
     return list_file_strategy
 
@@ -152,6 +153,11 @@ if __name__ == "__main__":  # pragma: no cover
 
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--no-env-file", action="store_true", help="Use only the process environment, without .env")
+    parser.add_argument(
+        "--skip-ingested",
+        action="store_true",
+        help="Skip unchanged files only when Azure Blob metadata and indexed sections confirm successful ingestion",
+    )
     args = parser.parse_args()
 
     if args.verbose:
@@ -190,6 +196,16 @@ if __name__ == "__main__":  # pragma: no cover
     # characters instead of one page per row (avoids out-of-memory on large CSV files).
     # `... or "0"` treats an empty-string env var (common in CI substitution) as unset.
     csv_max_chars_per_page = int(os.getenv("CSV_MAX_PAGE_CHARS") or "0") or None
+    if args.skip_ingested and (
+        args.remove
+        or args.removeall
+        or use_int_vectorization
+        or use_multimodal
+        or use_content_understanding
+        or use_web_source
+        or use_sharepoint_source
+    ):
+        parser.error("--skip-ingested requires file-based ingestion without image processing or external sources")
 
     # Use the current user identity to connect to Azure services. See docs/localdev.md for required role assignments.
     if tenant_id := os.getenv("AZURE_TENANT_ID"):
@@ -257,6 +273,7 @@ if __name__ == "__main__":  # pragma: no cover
         azure_credential=azure_credential,
         local_files=args.files,
         enable_global_documents=enable_global_documents,
+        use_cache=not args.skip_ingested,
     )
 
     emb_model_dimensions = 1536
@@ -344,6 +361,7 @@ if __name__ == "__main__":  # pragma: no cover
             enforce_access_control=enforce_access_control,
             use_web_source=use_web_source,
             use_sharepoint_source=use_sharepoint_source,
+            skip_ingested=args.skip_ingested,
         )
 
     try:

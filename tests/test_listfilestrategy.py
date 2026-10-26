@@ -158,6 +158,21 @@ async def test_locallistfilestrategy_caches_only_completed_files(tmp_path, succe
 
 
 @pytest.mark.asyncio
+async def test_locallistfilestrategy_can_bypass_local_cache(tmp_path):
+    path = tmp_path / "sample.txt"
+    path.write_text("sample")
+    sidecar = tmp_path / "sample.txt.md5"
+    sidecar.write_text(hashlib.md5(b"sample").hexdigest())
+    strategy = LocalListFileStrategy(str(tmp_path / "*"), use_cache=False)
+    for _ in range(2):
+        files = [file async for file in strategy.list()]
+        assert len(files) == 1
+        assert files[0].filename() == "sample.txt"
+        files[0].close()
+    assert sidecar.read_text() == hashlib.md5(b"sample").hexdigest()
+
+
+@pytest.mark.asyncio
 async def test_locallistfilestrategy_global():
     with tempfile.TemporaryDirectory() as tmpdirname:
         for filename in ["a.pdf", "b.pdf", "c.pdf"]:

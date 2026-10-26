@@ -6,7 +6,7 @@ Keep these instructions current when changing code or development processes.
 ## Layout
 
 * `apphost.mts`: TypeScript AppHost for Azure Storage, Search, OpenAI deployments,
-  backend/frontend and explicitly started `ingest`, dynamic endpoints and health checks.
+  backend/frontend and automatic checkpointed `ingest`, dynamic endpoints and health checks.
 * `aspire.config.json`: SDK/integration versions and dashboard profiles.
 * `.template.config`: unpacked .NET engine template and Aspire CLI host metadata.
 * `app/backend`: Python Quart API. `approaches` implements RAG; Jinja2 prompts are
@@ -42,13 +42,16 @@ AppHost and wire their outputs to consumers. Do not restore `.env` loading, prov
 selection, environment forwarding loops or a second configuration validator there.
 Standalone ingestion/admin utilities may use `.env`; the application entry point
 does not load it. Mark any explicitly added credential parameter secret.
-The `ingest` resource receives AppHost outputs and uses `--no-env-file`. It shares
-the backend's Python environment and waits for the backend before manual Start.
-Do not make ingestion automatic: it mutates Azure data and calls a paid model.
+The `ingest` resource receives AppHost outputs and uses `--no-env-file --skip-ingested`.
+It shares the backend's Python environment and automatically starts after backend health.
+Skip files only when Blob completion fingerprints and all expected Search section IDs match.
+Ignore local MD5 caches in this mode and record completion only after indexing/cleanup succeeds.
+When ingestion behavior changes, update the fingerprint version/settings to invalidate old receipts.
 There is no AZD state or provisioning workflow.
 
-AppHost startup can provision real Azure services and role assignments. Do not start
-it without authorization for those effects. Do not provision resources,
+AppHost startup can provision real Azure services and role assignments, upload/index
+documents, and make paid embedding calls. Do not start it without authorization for
+all those effects. Do not provision resources,
 mutate IAM, run ingestion or paid model calls without authorization. Startup health
 means process readiness, not verified Azure credentials/index/model access.
 Use `az login` for local credentials. Preserve managed identity in deployed hosts.

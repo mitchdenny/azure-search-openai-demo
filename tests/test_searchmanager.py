@@ -14,12 +14,13 @@ from azure.search.documents.indexes.models import (
     SimpleField,
     VectorSearch,
 )
+from azure.search.documents.models import IndexingResult
 from openai.types.create_embedding_response import Usage
 
 from prepdocslib.embeddings import OpenAIEmbeddings
 from prepdocslib.listfilestrategy import File
 from prepdocslib.page import ImageOnPage
-from prepdocslib.searchmanager import SearchManager, Section
+from prepdocslib.searchmanager import SearchManager, Section, check_indexing_results
 from prepdocslib.strategy import SearchInfo
 from prepdocslib.textsplitter import Chunk
 
@@ -38,6 +39,18 @@ def search_info():
         credential=AzureKeyCredential("test"),
         index_name="test",
     )
+
+
+@pytest.mark.parametrize(
+    "results",
+    [
+        [],
+        [IndexingResult(key="section", succeeded=False, error_message="Rejected")],
+    ],
+)
+def test_indexing_results_require_complete_success(results):
+    with pytest.raises(RuntimeError, match="did not complete"):
+        check_indexing_results(results, 1)
 
 
 @pytest.mark.asyncio
@@ -518,6 +531,7 @@ async def test_update_content(monkeypatch, search_info):
         assert documents[0]["category"] == "test"
         assert documents[0]["sourcepage"] == "foo.pdf#page=1"
         assert documents[0]["sourcefile"] == "foo.pdf"
+        return [IndexingResult(key=document["id"], succeeded=True) for document in documents]
 
     monkeypatch.setattr(SearchClient, "upload_documents", mock_upload_documents)
 
@@ -547,6 +561,7 @@ async def test_update_content_many(monkeypatch, search_info):
 
     async def mock_upload_documents(self, documents):
         ids.extend([doc["id"] for doc in documents])
+        return [IndexingResult(key=document["id"], succeeded=True) for document in documents]
 
     monkeypatch.setattr(SearchClient, "upload_documents", mock_upload_documents)
 
@@ -599,6 +614,7 @@ async def test_update_content_with_embeddings(monkeypatch, search_info):
 
     async def mock_upload_documents(self, documents):
         documents_uploaded.extend(documents)
+        return [IndexingResult(key=document["id"], succeeded=True) for document in documents]
 
     monkeypatch.setattr(SearchClient, "upload_documents", mock_upload_documents)
     embeddings = OpenAIEmbeddings(
@@ -648,6 +664,7 @@ async def test_update_content_no_images_when_disabled(monkeypatch, search_info):
 
     async def mock_upload_documents(self, documents):
         documents_uploaded.extend(documents)
+        return [IndexingResult(key=document["id"], succeeded=True) for document in documents]
 
     monkeypatch.setattr(SearchClient, "upload_documents", mock_upload_documents)
 
@@ -677,6 +694,7 @@ async def test_update_content_with_images_when_enabled(monkeypatch, search_info)
 
     async def mock_upload_documents(self, documents):
         documents_uploaded.extend(documents)
+        return [IndexingResult(key=document["id"], succeeded=True) for document in documents]
 
     monkeypatch.setattr(SearchClient, "upload_documents", mock_upload_documents)
 

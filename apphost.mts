@@ -66,7 +66,7 @@ await builder
   .addPythonApp("ingest", "./app/backend", "prepdocs.py")
   .withVirtualEnvironment("../../.venv", { createIfNotExists: false })
   .withUv({ install: false })
-  .withArgs(["../../data/*", "--verbose", "--no-env-file"])
+  .withArgs(["../../data/*", "--verbose", "--no-env-file", "--skip-ingested"])
   .withReference(content)
   .withReference(search)
   .withReference(embeddings)
@@ -84,8 +84,7 @@ await builder
   .withEnvironment("AZURE_OPENAI_EMB_DIMENSIONS", "1536")
   .withEnvironment("USE_LOCAL_PDF_PARSER", "true")
   .withEnvironment("USE_LOCAL_HTML_PARSER", "true")
-  .waitFor(backend)
-  .withExplicitStart();
+  .waitFor(backend);
 
 await builder
   .addViteApp("frontend", "./app/frontend")

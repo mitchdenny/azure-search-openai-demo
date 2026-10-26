@@ -29,24 +29,26 @@ PyPI before starting the backend. Ingestion reuses that environment. Python is c
 to 3.13, regardless of newer or older system interpreters. First startup needs network
 access for packages and, if necessary, the Python download.
 Startup uses Aspire's Azure subscription/location configuration and can provision
-billable resources and role assignments. Run it only with authorization.
+billable resources and role assignments, upload documents and make paid embedding
+calls. Run it only with authorization for these effects.
 The template uses GPT-4.1 mini and text-embedding-3-small (1536 dimensions).
 Change the resource declarations in `apphost.mts`, not a set of provider environment variables.
 Open the frontend URL in the Aspire dashboard. No frontend build is required for development.
-**Before asking the sample questions, [ingest the sample documents](docs/localdev.md#ingest-documents-explicitly).**
-Provisioning creates the Search service, not the `gptkbindex` index or its contents.
-Start the **ingest** resource in the dashboard, or run this from another terminal:
+The **ingest** resource automatically prepares `data/` after the backend is healthy.
+**Before asking sample questions, wait for [ingest to finish successfully](docs/localdev.md#automatic-document-ingestion).**
+Watch progress from the dashboard or another terminal:
 
 ```sh
-aspire resource ingest start --apphost apphost.mts
 aspire logs ingest --apphost apphost.mts
 ```
 
-Wait for `ingest` to exit successfully before chatting. It uses the AppHost's Azure
-resources, with no `.env` setup. Ingestion uploads documents and calls the embedding
-model, so it requires explicit authorization and never starts automatically.
+It uses the AppHost's Azure resources, with no `.env` setup. On subsequent starts it
+checks Azure Blob completion metadata and Search sections, skipping unchanged,
+successfully ingested files without uploading or embedding them again. Missing or
+changed files are processed; failures remain visible in the resource logs and can be retried.
 Prepare data before a demo: initial PDF ingestion can take tens of minutes at low
-embedding quotas; subsequent runs skip successfully indexed, unchanged files.
+embedding quotas. Existing documents without completion metadata are ingested once
+to establish a reliable checkpoint.
 See [local development](docs/localdev.md) for prerequisites, permissions, ingestion,
 authentication, troubleshooting, and the limits of health checks.
 

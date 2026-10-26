@@ -9,8 +9,9 @@ resource outputs and fixed application settings from that model. There is no App
 `.env` loader, provider selector, environment forwarding loop, or required-value schema.
 Change resources/models in the AppHost rather than configuring alternate providers.
 
-**Startup can provision billable Azure resources and role assignments.** Obtain
-authorization first. Aspire asks for Azure subscription and location; select a region
+**Startup can provision billable Azure resources and role assignments and automatically
+upload/index documents with paid embedding calls.** Obtain authorization for these effects
+first. Aspire asks for Azure subscription and location; select a region
 with quota for both models. There is no AI Search emulator, and an empty index cannot
 answer sample questions. Model calls and ingestion can incur charges.
 See [Aspire local Azure provisioning](https://aspire.dev/integrations/cloud/azure/local-provisioning/)
@@ -59,7 +60,7 @@ aspire stop --non-interactive --apphost apphost.mts
 ```
 
 The graph is `frontend (Vite) -> backend (Uvicorn/Quart) -> Storage, Search, OpenAI`,
-plus an explicitly started `ingest` Python job targeting the same Azure resources.
+plus an automatic `ingest` Python job targeting the same Azure resources.
 Resource references and waits make the dependencies visible in the dashboard.
 The backend uses `CHAT_URI` from the chat deployment reference as the Azure OpenAI
 endpoint. Azure's endpoint hostname can differ from the resource name; do not
@@ -116,13 +117,12 @@ uv add --raw --no-sync -r app/backend/requirements.in -c app/backend/requirement
 When removing a dependency, remove it from both direct declarations before regenerating.
 Use `--upgrade-package <package>` only for an intentional upgrade. Commit both lockfiles.
 
-## Ingest documents explicitly
+## Automatic document ingestion
 
-After authorized provisioning, start **ingest** from the Aspire dashboard, or from
-another terminal at the application root:
+**ingest** starts automatically with the AppHost after the backend is healthy.
+Watch progress in the dashboard or another terminal at the application root:
 
 ```sh
-aspire resource ingest start --apphost apphost.mts
 aspire logs ingest --apphost apphost.mts
 ```
 
@@ -135,11 +135,26 @@ successful Start command.
 The first ingestion can take tens of minutes with low embedding quotas; watch its
 console logs and prepare data before presenting the demo.
 
-`ingest` uses `withExplicitStart()`: app startup/restart does not run it or trigger
-paid embedding calls. Start it explicitly after a restart when new/changed data needs
-uploading. Reruns skip unchanged files; hashes are recorded only after successful
-processing so failed files can be retried. The backend/frontend remain available
-while ingestion runs, but sample questions need the corresponding documents indexed.
+The job uses `--skip-ingested` to compare each file and its ingestion settings with a
+completion fingerprint stored on the citation blob. It also verifies that all expected
+Search section IDs are present. If everything is already ingested, it logs the skipped
+files and exits successfully without uploads or embedding calls. Missing blobs, missing
+Search sections, changed content, or changed target/model/parser settings trigger processing
+for the affected files. Shortened documents have their stale trailing sections removed.
+Completion metadata is written only after uploads, indexing and cleanup succeed; partial
+indexing failures fail the resource instead of being marked complete.
+
+Local `.md5` sidecars are ignored in this mode, so they cannot incorrectly skip data for a
+fresh Azure target. Documents ingested before this feature have no trustworthy remote
+completion record and are ingested once to establish it. Do not delete completion metadata
+unless you intend to reingest the file. Removed local files are not automatically deleted
+from Azure; use the explicit removal commands in [data ingestion](data_ingestion.md).
+
+Restart the AppHost to check for new/changed files, or retry a finished/failed job using
+`aspire resource ingest start --apphost apphost.mts`. The backend/frontend remain available
+while ingestion runs, but wait for successful completion before asking sample questions.
+Startup authorization must now include uploads/index changes and paid embedding calls
+when content is not already complete.
 
 For a standalone utility invocation instead, copy `.env.example` to `.env` for the
 ingestion utility and fill in the actual Storage, Search and OpenAI account names
@@ -164,15 +179,17 @@ Both paths can create/update an index and upload content; neither runs automatic
 Wait for ingestion to finish successfully before asking the sample questions.
 Resource-group/subscription values are optional for this local ingestion path;
 Azure CLI supplies the signed-in identity.
-MD5 sidecars are shared across configurations, so remove only the relevant `data/*.md5`
-files when deliberately ingesting unchanged documents into a new target.
+The standalone command retains its legacy local `.md5` cache unless `--skip-ingested` is
+passed. That flag supports file-based ingestion without multimodal processing, integrated
+vectorization, external knowledge sources or removal operations. Without it, remove only the
+relevant `data/*.md5` sidecars when deliberately loading unchanged files into a new target.
 See [ingestion architecture and options](data_ingestion.md).
 
 If chat reports `ResourceNotFoundError` and backend logs say
 `The index 'gptkbindex' ... was not found`, the Search service exists but ingestion
 has not created the index. This is not an OpenAI model compatibility failure.
-Complete the authorized ingestion above; restarting the backend or retrying the chat
-does not create the index. A streamed chat request can return HTTP 200 with an error
+Check that automatic ingestion finished successfully; restarting the backend alone or
+retrying the chat does not create the index. A streamed chat request can return HTTP 200 with an error
 event in its body, so inspect the UI and downstream Search spans, not just HTTP status.
 
 Cloud ingestion remains optional: configure separately deployed Functions, run

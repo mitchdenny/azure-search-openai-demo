@@ -84,9 +84,10 @@ class LocalListFileStrategy(ListFileStrategy):
     Concrete strategy for listing files that are located in a local filesystem
     """
 
-    def __init__(self, path_pattern: str, enable_global_documents: bool = False):
+    def __init__(self, path_pattern: str, enable_global_documents: bool = False, use_cache: bool = True):
         self.path_pattern = path_pattern
         self.enable_global_documents = enable_global_documents
+        self.use_cache = use_cache
 
     async def list_paths(self) -> AsyncGenerator[str, None]:
         async for p in self._list_paths(self.path_pattern):
@@ -104,14 +105,18 @@ class LocalListFileStrategy(ListFileStrategy):
     async def list(self) -> AsyncGenerator[File, None]:
         acls = {"oids": ["all"], "groups": ["all"]} if self.enable_global_documents else {}
         async for path in self.list_paths():
-            if not self.check_md5(path):
+            if path.endswith(".md5"):
+                continue
+            if not self.use_cache or not self.check_md5(path):
                 file = File(content=open(path, mode="rb"), acls=acls, url=path)
-                file_hash = hashlib.md5(file.content.read()).hexdigest()
-                file.content.seek(0)
+                if self.use_cache:
+                    file_hash = hashlib.md5(file.content.read()).hexdigest()
+                    file.content.seek(0)
                 yield file
                 # The consumer resumes this generator only after processing succeeds.
-                with open(f"{path}.md5", "w", encoding="utf-8") as md5_f:
-                    md5_f.write(file_hash)
+                if self.use_cache:
+                    with open(f"{path}.md5", "w", encoding="utf-8") as md5_f:
+                        md5_f.write(file_hash)
 
     def check_md5(self, path: str) -> bool:
         # if filename ends in .md5 skip

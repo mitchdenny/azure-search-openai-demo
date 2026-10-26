@@ -103,16 +103,17 @@ If multimodal is enabled, that document will also include an `"images"` field an
 ## Local ingestion
 
 The [`prepdocs.py`](../app/backend/prepdocs.py) script uploads and indexes documents.
-The template exposes it as the explicitly started **ingest** Aspire resource.
-Use the dashboard's Start action or `aspire resource ingest start --apphost apphost.mts`
-to ingest the bundled `data/` with AppHost-provided resource settings, without a `.env`
-file. See [local development](localdev.md#ingest-documents-explicitly) for authorization,
-progress and completion checks.
-Complete the virtual-environment setup in [local development](localdev.md) first.
-Run `scripts/prepdocs.sh` (Mac/Linux), `scripts/prepdocs.ps1` (Windows), or the Python
+The template exposes it as the automatic **ingest** Aspire resource, using AppHost-provided
+settings and the shared uv-managed environment, without a `.env` file. On startup,
+`--skip-ingested` checks Azure Blob completion metadata and the expected Search sections;
+unchanged, completed files are skipped without uploads or embedding calls.
+See [local development](localdev.md#automatic-document-ingestion) for authorization,
+progress, retries and completion checks.
+For standalone ingestion, run `scripts/prepdocs.sh` (Mac/Linux), `scripts/prepdocs.ps1` (Windows), or the Python
 script directly. Configuration comes from root `.env`, with process values taking
 precedence. Additional arguments are forwarded. Ingestion mutates Search/Storage
-and may incur model charges; it is never run automatically by Aspire.
+and may incur model charges. Starting the AppHost now also requires authorization for
+automatic ingestion of missing or changed content.
 
 ![Diagram of the indexing process](images/diagram_prepdocs.png)
 
@@ -131,9 +132,16 @@ After running the script with the desired category, ensure these categories are 
 
 ### Indexing additional documents
 
-To upload more PDFs, put them in the data/ folder and run `./scripts/prepdocs.sh` or `./scripts/prepdocs.ps1`.
+To upload more PDFs, put them in `data/` and restart the AppHost or start its `ingest`
+resource again. Standalone users can run `./scripts/prepdocs.sh` or `./scripts/prepdocs.ps1`.
 
-After successfully processing a file, the prepdocs script writes an .md5 file with
+With `--skip-ingested` (the AppHost default), completion metadata is recorded on the
+Azure citation blob only after successful indexing and stale-section cleanup. The file
+fingerprint includes its content, target index and embedding/processing settings.
+Only files with matching metadata and all expected sections are skipped. Local `.md5`
+files are ignored; legacy documents without a remote checkpoint are ingested once.
+
+Without that flag, after successfully processing a file, the prepdocs script writes an .md5 file with
 its MD5 hash. Whenever ingestion is re-run, that hash is checked against the current
 hash and the file is skipped if it hasn't changed. Failed files are not marked as
 complete and can be retried. These sidecars are local to the data directory, not the

@@ -24,7 +24,8 @@ from .mocks import (
 
 @pytest.mark.parametrize("endpoint", [None, "https://actual-subdomain.openai.azure.com/"])
 @pytest.mark.parametrize("no_env_file", [True, False])
-def test_prepdocs_cli_azure_setup(monkeypatch, endpoint, no_env_file):
+@pytest.mark.parametrize("skip_ingested", [True, False])
+def test_prepdocs_cli_azure_setup(monkeypatch, endpoint, no_env_file, skip_ingested):
     import prepdocslib.servicesetup as servicesetup
 
     env = {
@@ -42,7 +43,13 @@ def test_prepdocs_cli_azure_setup(monkeypatch, endpoint, no_env_file):
     if endpoint is not None:
         env["AZURE_OPENAI_ENDPOINT"] = endpoint
     monkeypatch.setattr(os, "environ", env)
-    monkeypatch.setattr(sys, "argv", ["prepdocs.py", "data/*"] + (["--no-env-file"] if no_env_file else []))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["prepdocs.py", "data/*"]
+        + (["--no-env-file"] if no_env_file else [])
+        + (["--skip-ingested"] if skip_ingested else []),
+    )
     dotenv_loader = MagicMock()
     monkeypatch.setattr("dotenv.load_dotenv", dotenv_loader)
     monkeypatch.setattr("azure.identity.aio.AzureCliCredential", lambda **kwargs: AsyncMock())
@@ -55,7 +62,8 @@ def test_prepdocs_cli_azure_setup(monkeypatch, endpoint, no_env_file):
     blob_factory = MagicMock(return_value=AsyncMock())
     monkeypatch.setattr(servicesetup, "setup_blob_manager", blob_factory)
     strategy = AsyncMock()
-    monkeypatch.setattr("prepdocslib.filestrategy.FileStrategy", lambda **kwargs: strategy)
+    strategy_factory = MagicMock(return_value=strategy)
+    monkeypatch.setattr("prepdocslib.filestrategy.FileStrategy", strategy_factory)
 
     runpy.run_path("app/backend/prepdocs.py", run_name="__main__")
 
@@ -66,6 +74,29 @@ def test_prepdocs_cli_azure_setup(monkeypatch, endpoint, no_env_file):
     assert dotenv_loader.call_count == (0 if no_env_file else 1)
     strategy.setup.assert_awaited_once()
     strategy.run.assert_awaited_once()
+    assert strategy_factory.call_args.kwargs["skip_ingested"] is skip_ingested
+    assert strategy_factory.call_args.kwargs["list_file_strategy"].use_cache is not skip_ingested
+
+
+@pytest.mark.parametrize(
+    "extra_args,environment",
+    [
+        (["--remove"], {}),
+        (["--removeall"], {}),
+        ([], {"USE_FEATURE_INT_VECTORIZATION": "true"}),
+        ([], {"USE_MULTIMODAL": "true"}),
+        ([], {"USE_MEDIA_DESCRIBER_AZURE_CU": "true"}),
+        ([], {"USE_WEB_SOURCE": "true"}),
+        ([], {"USE_SHAREPOINT_SOURCE": "true"}),
+    ],
+)
+def test_prepdocs_skip_ingested_rejects_unsupported_modes(monkeypatch, capsys, extra_args, environment):
+    monkeypatch.setattr(os, "environ", environment)
+    monkeypatch.setattr(sys, "argv", ["prepdocs.py", "data/*", "--no-env-file", "--skip-ingested", *extra_args])
+    with pytest.raises(SystemExit) as error:
+        runpy.run_path("app/backend/prepdocs.py", run_name="__main__")
+    assert error.value.code == 2
+    assert "--skip-ingested requires file-based ingestion" in capsys.readouterr().err
 
 
 class MockEmbeddingsClient:
