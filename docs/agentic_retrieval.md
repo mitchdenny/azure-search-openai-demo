@@ -4,8 +4,11 @@ This repository includes an optional feature that uses [agentic retrieval from A
 
 ## Configuration
 
-Add the settings below to root `.env`, using existing deployed resources. Aspire
-does not provision models, knowledge sources or a knowledge base.
+Agentic retrieval is not a template switch. To enable it, add the required model
+deployment to `apphost.mts` and explicitly wire the settings below to the backend
+with `.withEnvironment(...)`. Configure knowledge sources and the knowledge base
+separately; the default AppHost does not create them. Standalone ingestion utilities
+also need those settings in their environment or `.env`.
 
 1. **Enable agentic retrieval:**
 

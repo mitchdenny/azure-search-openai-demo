@@ -17,6 +17,9 @@
   },
   "packages": {
     "Aspire.Hosting.Python": "13.6.4",
-    "Aspire.Hosting.JavaScript": "13.6.4"
+    "Aspire.Hosting.JavaScript": "13.6.4",
+    "Aspire.Hosting.Azure.Storage": "13.6.4",
+    "Aspire.Hosting.Azure.Search": "13.6.4",
+    "Aspire.Hosting.Azure.CognitiveServices": "13.6.4"
   }
 }

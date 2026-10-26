@@ -141,9 +141,11 @@ If you are not using Copilot Agent mode, consult both that file and suggestions 
 
 ### Adding environment variables
 
-Document new settings in `.env.example` and the relevant feature guide.
-Ensure `apphost.mts` forwards them as parameters (mark credentials secret), and
-read them in the relevant backend or ingestion helper. Shell/Aspire values must
+Model service dependencies and deployment choices directly in `apphost.mts`.
+Wire resource outputs to the backend's existing environment contract rather than
+adding provider switches, environment forwarding loops, or `.env` loading to the
+AppHost. Document explicit application-model changes in the relevant feature guide.
+`.env.example` is for standalone ingestion/admin utilities only; their shell values
 take precedence over `.env`. Do not add AZD state or deployment hooks.
 
 ### Adding new UI strings

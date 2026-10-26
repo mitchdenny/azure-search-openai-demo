@@ -1,33 +1,37 @@
 # Local development with Aspire
 
-## External prerequisites
+## Azure resources in the app model
 
-The default app requires an existing Azure AI Search service and populated index,
-Blob Storage account/container holding the cited source files, an Azure OpenAI chat
-deployment, and an embedding deployment matching the index's model and dimensions.
-Supply their names in root `.env` using [.env.example](../.env.example).
-No services are provisioned by startup. There is no AI Search emulator, and an empty
-index cannot answer sample questions. Model calls and ingestion can incur charges.
+`apphost.mts` declares Azure Storage and its `content` Blob container, Azure AI Search,
+and Azure OpenAI with `chat` (GPT-4.1 mini, version 2025-04-14) and `embeddings`
+(text-embedding-3-small, version 1, 1536 dimensions) deployments. The backend receives
+resource outputs and fixed application settings from that model. There is no AppHost
+`.env` loader, provider selector, environment forwarding loop, or required-value schema.
+Change resources/models in the AppHost rather than configuring alternate providers.
 
-For keyless access, run `az login` (optionally `--tenant <tenant-id>`).
+**Startup can provision billable Azure resources and role assignments.** Obtain
+authorization first. Aspire asks for Azure subscription and location; select a region
+with quota for both models. There is no AI Search emulator, and an empty index cannot
+answer sample questions. Model calls and ingestion can incur charges.
+See [Aspire local Azure provisioning](https://aspire.dev/integrations/cloud/azure/local-provisioning/)
+for subscription/location configuration and provisioning permissions.
+
+For keyless access, run `az login`.
 The backend and utilities use `AzureCliCredential` locally and the backend keeps
 `ManagedIdentityCredential` when `RUNNING_IN_PRODUCTION` or `WEBSITE_HOSTNAME` is set.
-An administrator must grant the appropriate access separately: Search Index Data Reader
+AppHost references declare resource access. If access is managed separately, the backend needs Search Index Data Reader
 for queries, Storage Blob Data Reader for citations, and Cognitive Services OpenAI User
 for models. Ingestion additionally needs Search Service Contributor, Search Index Data
 Contributor, and Storage Blob Data Contributor. Optional services need their own roles.
 Do not run role-assignment or app-registration utilities without authorization.
 
-`.env` is ignored by Git and excluded from template output. Existing process environment
-values override it, including values supplied by Aspire. Never put credentials in
+`.env` is only for standalone ingestion/admin utilities, not application startup.
+It is ignored by Git and excluded from template output. Never put credentials in
 `aspire.config.json`, command-line arguments, or committed files.
 
-Optional configurations retain their original names: `OPENAI_HOST` (`azure`,
-`azure_custom`, `openai`, `local`), `AZURE_OPENAI_CUSTOM_URL`, `OPENAI_API_KEY`,
-`AZURE_OPENAI_API_KEY_OVERRIDE`, `USE_VECTORS`, `USE_MULTIMODAL`, `USE_USER_UPLOAD`,
-`USE_CHAT_HISTORY_COSMOS`, speech, agentic retrieval, and authentication settings.
-Local/OpenAI model endpoints do not remove the Search/Blob dependencies.
-Missing required configuration produces an explicit AppHost startup error.
+The upstream optional-feature implementation remains in the backend, but the template
+does not expose its provider/feature matrix as parameters. Enabling an optional feature
+requires explicit resource declarations and backend wiring in the AppHost.
 
 ## Setup and lifecycle
 
@@ -38,26 +42,25 @@ npm ci
 python3 -m venv .venv
 .venv/bin/python -m pip install -r app/backend/requirements.txt
 npm --prefix app/frontend ci
-cp .env.example .env
-# Edit .env with your existing resources. Never paste secrets into logs.
 az login
 aspire restore
+# Only after Azure provisioning and role assignments are authorized:
 aspire start --non-interactive --isolated --apphost apphost.mts
 aspire wait backend --apphost apphost.mts
 aspire wait frontend --apphost apphost.mts
 aspire describe --apphost apphost.mts
 ```
 
-On Windows use `.venv\Scripts\python.exe` and `Copy-Item`. Alternatively use foreground
+On Windows use `.venv\Scripts\python.exe`. Alternatively use foreground
 `aspire run --isolated --apphost apphost.mts`. Stop only this app:
 
 ```sh
 aspire stop --non-interactive --apphost apphost.mts
 ```
 
-The graph is `frontend (Vite) -> backend (Uvicorn/Quart) -> existing Azure services`.
-Configuration appears as AppHost parameters; keys, secrets and connection strings are
-marked secret. AppHost/frontend use their own npm lockfiles. Python uses the pinned
+The graph is `frontend (Vite) -> backend (Uvicorn/Quart) -> Storage, Search, OpenAI`.
+Resource references and waits make the dependencies visible in the dashboard.
+AppHost/frontend use their own npm lockfiles. Python uses the pinned
 backend requirements and root `.venv`; Aspire's pip setup and npm install resources
 ensure dependencies are present. Run the explicit setup first for reproducible installs.
 If you create `.venv` with `uv venv`, use `uv venv --seed` so the environment contains
@@ -73,7 +76,11 @@ Python reload and Vite HMR are enabled. Changing AppHost/configuration requires 
 
 ## Ingest documents explicitly
 
-With Azure access and model usage authorized:
+After authorized provisioning, copy `.env.example` to `.env` for the standalone
+ingestion utility and fill in the actual Storage, Search and OpenAI account names
+from the provisioned resources. The deployment, index and container defaults match
+the AppHost. Do not change embedding model/dimensions independently of the index.
+With Azure access, data mutation and model usage authorized:
 
 ```sh
 .venv/bin/python app/backend/prepdocs.py 'data/*' --verbose

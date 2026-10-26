@@ -5,8 +5,8 @@ Keep these instructions current when changing code or development processes.
 
 ## Layout
 
-* `apphost.mts`: TypeScript AppHost for backend and frontend, dynamic endpoints,
-  health checks, environment parameters and dependencies.
+* `apphost.mts`: TypeScript AppHost for Azure Storage, Search, OpenAI deployments,
+  backend and frontend, dynamic endpoints, health checks and dependencies.
 * `aspire.config.json`: SDK/integration versions and dashboard profiles.
 * `.template.config`: unpacked .NET engine template and Aspire CLI host metadata.
 * `app/backend`: Python Quart API. `approaches` implements RAG; Jinja2 prompts are
@@ -32,12 +32,15 @@ AppHost uses npm (`package-lock.json`); frontend has its own npm lockfile.
 Never edit generated `.aspire/modules`. Use `aspire add` / `aspire restore`.
 Verify unfamiliar Aspire APIs with docs and generated read-only signatures.
 
-Root `.env` is optional file-based configuration; process values take precedence.
-New backend environment settings must also be forwarded by the AppHost; adjust its
-allowlist if necessary. Add examples to `.env.example` and relevant docs. Mark
-credentials as secret parameters. There is no AZD state or provisioning workflow.
+The template is opinionated: declare Azure resources and model deployments in the
+AppHost and wire their outputs to consumers. Do not restore `.env` loading, provider
+selection, environment forwarding loops or a second configuration validator there.
+Standalone ingestion/admin utilities may use `.env`; the application entry point
+does not load it. Mark any explicitly added credential parameter secret.
+There is no AZD state or provisioning workflow.
 
-Real Azure Search, Blob and model services are required. Do not provision resources,
+AppHost startup can provision real Azure services and role assignments. Do not start
+it without authorization for those effects. Do not provision resources,
 mutate IAM, run ingestion or paid model calls without authorization. Startup health
 means process readiness, not verified Azure credentials/index/model access.
 Use `az login` for local credentials. Preserve managed identity in deployed hosts.
@@ -45,7 +48,7 @@ Use `az login` for local credentials. Preserve managed identity in deployed host
 ## Template invariants
 
 Stable SDK/integration defaults are 13.6.4. Keep `AspireVersion` string replacement
-scoped to the SDK field; resolve Python and JavaScript integration versions
+scoped to the SDK field; resolve hosting integration versions
 independently using host `nugetPackageVersion` sources. Do not hardcode PR feeds,
 machine paths, secrets or generated modules. Custom Git/directory generation needs
 the feature CLI from microsoft/aspire#21263; generation executes no restore/scripts.

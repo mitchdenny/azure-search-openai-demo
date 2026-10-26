@@ -43,6 +43,21 @@
       "replaces": "13.6.4",
       "replacementContexts": [{ "before": "\"Aspire.Hosting.JavaScript\": \"", "after": "\"" }]
     },
+    "AzureStorageIntegrationVersion": {
+      "type": "parameter", "datatype": "string", "defaultValue": "13.6.4",
+      "replaces": "13.6.4",
+      "replacementContexts": [{ "before": "\"Aspire.Hosting.Azure.Storage\": \"", "after": "\"" }]
+    },
+    "AzureSearchIntegrationVersion": {
+      "type": "parameter", "datatype": "string", "defaultValue": "13.6.4",
+      "replaces": "13.6.4",
+      "replacementContexts": [{ "before": "\"Aspire.Hosting.Azure.Search\": \"", "after": "\"" }]
+    },
+    "AzureOpenAIIntegrationVersion": {
+      "type": "parameter", "datatype": "string", "defaultValue": "13.6.4",
+      "replaces": "13.6.4",
+      "replacementContexts": [{ "before": "\"Aspire.Hosting.Azure.CognitiveServices\": \"", "after": "\"" }]
+    },
     "DashboardHttpsPort": {
       "type": "generated", "generator": "port", "replaces": "17183",
       "parameters": { "low": 17000, "high": 17999 }

@@ -2,7 +2,8 @@
 
 This template currently implements the local Aspire inner loop only. A future
 `aspire deploy` target must explicitly model compute, networking, identity, service
-provisioning, static assets/reverse proxying, secrets, and cloud ingestion Functions.
+static assets/reverse proxying, secrets, and cloud ingestion Functions.
+Storage, Search and OpenAI resource provisioning is already declared in the AppHost.
 The removed AZD/Bicep setup is not an implicit deployment fallback.
 
 Retain the original application's production requirements: managed identity with

@@ -22,7 +22,10 @@ With this feature enabled, the following changes are made:
 
 ## Configuration
 
-Put the settings below in root `.env` and restart the AppHost after changes.
+Multimodal support is not a template switch. Add its service dependencies to
+`apphost.mts` and explicitly wire the settings below to the backend with
+`.withEnvironment(...)`. Standalone ingestion utilities also need matching settings
+in their environment or `.env`. Restart the AppHost after changing the model.
 
 1. **Enable multimodal capabilities**
 

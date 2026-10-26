@@ -16,6 +16,30 @@
         "versionRange": "*-*",
         "allowPrerelease": true
       }
+    },
+    "AzureStorageIntegrationVersion": {
+      "valueSource": {
+        "kind": "nugetPackageVersion",
+        "packageId": "Aspire.Hosting.Azure.Storage",
+        "versionRange": "*-*",
+        "allowPrerelease": true
+      }
+    },
+    "AzureSearchIntegrationVersion": {
+      "valueSource": {
+        "kind": "nugetPackageVersion",
+        "packageId": "Aspire.Hosting.Azure.Search",
+        "versionRange": "*-*",
+        "allowPrerelease": true
+      }
+    },
+    "AzureOpenAIIntegrationVersion": {
+      "valueSource": {
+        "kind": "nugetPackageVersion",
+        "packageId": "Aspire.Hosting.Azure.CognitiveServices",
+        "versionRange": "*-*",
+        "allowPrerelease": true
+      }
     }
   }
 }

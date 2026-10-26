@@ -6,7 +6,8 @@ The original MIT license, sample documents, application features, and tests are 
 
 The TypeScript AppHost runs the Quart backend and Vite frontend with managed ports,
 same-origin API proxying, hot reload, health checks, and backend OpenTelemetry traces.
-It connects to **existing Azure services**; Azure AI Search has no faithful local emulator.
+It models Azure Storage, Azure AI Search, and Azure OpenAI chat/embedding deployments
+directly in the AppHost; Azure AI Search has no faithful local emulator.
 This is not an offline demo and does not replace real model/retrieval calls with mock responses.
 
 ## Run locally
@@ -19,14 +20,16 @@ npm ci
 python3 -m venv .venv
 .venv/bin/python -m pip install -r app/backend/requirements.txt
 npm --prefix app/frontend ci
-cp .env.example .env
-# Fill in existing resource names/deployments in .env, then authenticate:
 az login
 aspire restore
 aspire run --isolated --apphost apphost.mts
 ```
 
-On Windows, use `.venv\Scripts\python.exe` and `Copy-Item .env.example .env`.
+On Windows, use `.venv\Scripts\python.exe`.
+Startup uses Aspire's Azure subscription/location configuration and can provision
+billable resources and role assignments. Run it only with authorization.
+The template uses GPT-4.1 mini and text-embedding-3-small (1536 dimensions).
+Change the resource declarations in `apphost.mts`, not a set of provider environment variables.
 Open the frontend URL in the Aspire dashboard. No frontend build is required for development.
 See [local development](docs/localdev.md) for prerequisites, permissions, ingestion,
 authentication, troubleshooting, and the limits of health checks.
@@ -54,8 +57,8 @@ aspire new --template-repository https://github.com/mitchdenny/azure-search-open
 Generation does **not** restore dependencies, run scripts, ingest data, or provision Azure.
 Run the local setup commands inside the generated directory. Names and dashboard ports
 are generated; secrets, caches, generated modules, Git metadata, and installed packages
-are excluded. `AspireVersion` receives the generating CLI's SDK identity; Python and
-JavaScript integration versions resolve independently through its NuGet package policy.
+are excluded. `AspireVersion` receives the generating CLI's SDK identity; hosting
+integration versions resolve independently through its NuGet package policy.
 For a PR CLI, use its documented `ASPIRE_CLI_PACKAGES` override with matching packages.
 There are no PR-specific dependencies or machine-local feed paths in this template.
 Ordinary .NET template-engine generation uses stable 13.6.4 defaults.

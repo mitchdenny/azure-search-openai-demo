@@ -2,9 +2,12 @@
 
 The original Entra/MSAL authentication, on-behalf-of (OBO) token exchange, ACL filters,
 user uploads, and Cosmos history code is retained. Aspire does not create app
-registrations, assign roles, or configure hosted Easy Auth.
+registrations or configure hosted Easy Auth. Azure service references in the AppHost
+can provision service-access role assignments, which are separate from Entra app registration.
 
-Configure existing client/server app registrations in root `.env`:
+Authentication is not a template switch. To enable it, explicitly wire the settings
+below to the backend with `.withEnvironment(...)` in `apphost.mts`, using a secret
+Aspire parameter for the server secret. The backend does not load root `.env`:
 
 ```dotenv
 AZURE_USE_AUTHENTICATION=true

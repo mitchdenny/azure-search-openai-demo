@@ -1,9 +1,9 @@
 # RAG chat: Using reasoning models
 
 Reasoning models spend more time processing the user's request. To use this feature,
-configure an existing GPT-5-family deployment using `AZURE_OPENAI_CHATGPT_DEPLOYMENT`
-and its matching `AZURE_OPENAI_CHATGPT_MODEL` in root `.env`. The example configuration
-uses `gpt-4.1-mini`, not a reasoning model. Aspire does not deploy models.
+change the chat deployment's model and version in `apphost.mts` to a supported
+GPT-5-family model. The backend's deployment/model settings are derived from that
+resource. The template uses `gpt-4.1-mini`, not a reasoning model.
 
 ## Supported models
 
@@ -23,7 +23,9 @@ We support the GPT-5 model family, but not the earlier o-series models, due to A
 
 2. **Update the infrastructure and application:**
 
-   Put the setting in `.env` and restart the AppHost to apply it.
+   Wire the setting explicitly with
+   `.withEnvironment("AZURE_OPENAI_REASONING_EFFORT", "medium")` on the backend
+   in `apphost.mts`, then restart the AppHost.
 
 3. **Try out the feature:**
 

@@ -169,8 +169,9 @@ sequenceDiagram
 
 ## Optional Features
 
-The architecture supports several optional features. Configure their existing services
-using environment variables as described in [local development](localdev.md):
+The backend supports several optional features. They are not exposed as template
+switches; add their resources and explicit backend wiring to the AppHost as described
+in [local development](localdev.md):
 
 - **GPT-4 with Vision**: Process image-heavy documents
 - **Speech Services**: Voice input/output capabilities
@@ -182,7 +183,8 @@ using environment variables as described in [local development](localdev.md):
 
 `apphost.mts` runs Vite and Uvicorn/Quart. The frontend references and waits for the
 backend, receives its dynamic HTTP endpoint through `BACKEND_URL`, and proxies API
-requests from the browser's origin. The backend connects to existing Azure services.
-Parameters preserve the application's environment variable names. See
+requests from the browser's origin. The AppHost declares Azure Storage and its content
+container, Azure AI Search, and Azure OpenAI chat and embedding deployments. Resource
+references, outputs and waits wire those services into the backend's environment contract. See
 [local development](localdev.md) for health/telemetry behavior and prerequisites.
 Cloud compute provisioning and `aspire deploy` are future work.
