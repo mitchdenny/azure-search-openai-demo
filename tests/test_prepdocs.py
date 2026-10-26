@@ -23,7 +23,8 @@ from .mocks import (
 
 
 @pytest.mark.parametrize("endpoint", [None, "https://actual-subdomain.openai.azure.com/"])
-def test_prepdocs_cli_azure_setup(monkeypatch, endpoint):
+@pytest.mark.parametrize("no_env_file", [True, False])
+def test_prepdocs_cli_azure_setup(monkeypatch, endpoint, no_env_file):
     import prepdocslib.servicesetup as servicesetup
 
     env = {
@@ -41,8 +42,9 @@ def test_prepdocs_cli_azure_setup(monkeypatch, endpoint):
     if endpoint is not None:
         env["AZURE_OPENAI_ENDPOINT"] = endpoint
     monkeypatch.setattr(os, "environ", env)
-    monkeypatch.setattr(sys, "argv", ["prepdocs.py", "data/*"])
-    monkeypatch.setattr("dotenv.load_dotenv", lambda **kwargs: None)
+    monkeypatch.setattr(sys, "argv", ["prepdocs.py", "data/*"] + (["--no-env-file"] if no_env_file else []))
+    dotenv_loader = MagicMock()
+    monkeypatch.setattr("dotenv.load_dotenv", dotenv_loader)
     monkeypatch.setattr("azure.identity.aio.AzureCliCredential", lambda **kwargs: AsyncMock())
     session = MagicMock()
     session.__aenter__.return_value = session
@@ -61,6 +63,7 @@ def test_prepdocs_cli_azure_setup(monkeypatch, endpoint):
     assert client_factory.call_args.kwargs["base_url"] == f"{expected_endpoint.rstrip('/')}/openai/v1"
     assert blob_factory.call_args.kwargs["storage_resource_group"] is None
     assert blob_factory.call_args.kwargs["subscription_id"] is None
+    assert dotenv_loader.call_count == (0 if no_env_file else 1)
     strategy.setup.assert_awaited_once()
     strategy.run.assert_awaited_once()
 

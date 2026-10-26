@@ -151,6 +151,7 @@ if __name__ == "__main__":  # pragma: no cover
     )
 
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument("--no-env-file", action="store_true", help="Use only the process environment, without .env")
     args = parser.parse_args()
 
     if args.verbose:
@@ -159,7 +160,8 @@ if __name__ == "__main__":  # pragma: no cover
         # to avoid seeing the noisy INFO level logs from the Azure SDKs
         logger.setLevel(logging.DEBUG)
 
-    load_dotenv(override=False)
+    if not args.no_env_file:
+        load_dotenv(override=False)
 
     if os.getenv("USE_CLOUD_INGESTION", "").lower() == "true":
         logger.warning(

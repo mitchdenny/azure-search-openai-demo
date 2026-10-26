@@ -133,6 +133,31 @@ def test_locallistfilestrategy_checkmd5():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("succeeded", [True, False])
+async def test_locallistfilestrategy_caches_only_completed_files(tmp_path, succeeded):
+    path = tmp_path / "sample.txt"
+    path.write_text("sample")
+    strategy = LocalListFileStrategy(str(path))
+    files = strategy.list()
+    file = await anext(files)
+    assert file.content.read() == b"sample"
+    file.close()
+    assert not (tmp_path / "sample.txt.md5").exists()
+
+    if succeeded:
+        with pytest.raises(StopAsyncIteration):
+            await anext(files)
+    else:
+        await files.aclose()
+
+    assert strategy.check_md5(str(path)) is succeeded
+    retried = [file async for file in strategy.list()]
+    assert len(retried) == (0 if succeeded else 1)
+    for file in retried:
+        file.close()
+
+
+@pytest.mark.asyncio
 async def test_locallistfilestrategy_global():
     with tempfile.TemporaryDirectory() as tmpdirname:
         for filename in ["a.pdf", "b.pdf", "c.pdf"]:

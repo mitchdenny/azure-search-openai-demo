@@ -51,6 +51,31 @@ const backend = await builder
   .withHttpHealthCheck({ path: "/health" });
 
 await builder
+  .addPythonApp("ingest", "./app/backend", "prepdocs.py")
+  .withVirtualEnvironment("../../.venv", { createIfNotExists: false })
+  .withPip({ install: false })
+  .withArgs(["../../data/*", "--verbose", "--no-env-file"])
+  .withReference(content)
+  .withReference(search)
+  .withReference(embeddings)
+  .withEnvironment("AZURE_STORAGE_ACCOUNT", storage.getOutput("name"))
+  .withEnvironment("AZURE_STORAGE_CONTAINER", containerName)
+  .withEnvironment("AZURE_SEARCH_SERVICE", search.getOutput("name"))
+  .withEnvironment("AZURE_SEARCH_INDEX", "gptkbindex")
+  .withEnvironment("OPENAI_HOST", "azure")
+  .withEnvironment("AZURE_OPENAI_ENDPOINT", openai.getOutput("endpoint"))
+  .withEnvironment(
+    "AZURE_OPENAI_EMB_DEPLOYMENT",
+    await embeddings.deploymentName.get(),
+  )
+  .withEnvironment("AZURE_OPENAI_EMB_MODEL_NAME", await embeddings.modelName.get())
+  .withEnvironment("AZURE_OPENAI_EMB_DIMENSIONS", "1536")
+  .withEnvironment("USE_LOCAL_PDF_PARSER", "true")
+  .withEnvironment("USE_LOCAL_HTML_PARSER", "true")
+  .waitFor(backend)
+  .withExplicitStart();
+
+await builder
   .addViteApp("frontend", "./app/frontend")
   .withEnvironment("BACKEND_URL", backend.getEndpoint("http"))
   .withReference(backend)

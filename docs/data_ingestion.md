@@ -103,6 +103,11 @@ If multimodal is enabled, that document will also include an `"images"` field an
 ## Local ingestion
 
 The [`prepdocs.py`](../app/backend/prepdocs.py) script uploads and indexes documents.
+The template exposes it as the explicitly started **ingest** Aspire resource.
+Use the dashboard's Start action or `aspire resource ingest start --apphost apphost.mts`
+to ingest the bundled `data/` with AppHost-provided resource settings, without a `.env`
+file. See [local development](localdev.md#ingest-documents-explicitly) for authorization,
+progress and completion checks.
 Complete the virtual-environment setup in [local development](localdev.md) first.
 Run `scripts/prepdocs.sh` (Mac/Linux), `scripts/prepdocs.ps1` (Windows), or the Python
 script directly. Configuration comes from root `.env`, with process values taking
@@ -128,7 +133,12 @@ After running the script with the desired category, ensure these categories are 
 
 To upload more PDFs, put them in the data/ folder and run `./scripts/prepdocs.sh` or `./scripts/prepdocs.ps1`.
 
-The prepdocs script writes an .md5 file with an MD5 hash of each file that gets uploaded. Whenever the prepdocs script is re-run, that hash is checked against the current hash and the file is skipped if it hasn't changed.
+After successfully processing a file, the prepdocs script writes an .md5 file with
+its MD5 hash. Whenever ingestion is re-run, that hash is checked against the current
+hash and the file is skipped if it hasn't changed. Failed files are not marked as
+complete and can be retried. These sidecars are local to the data directory, not the
+Azure target: remove the relevant sidecars before loading unchanged files into a new
+index/container. They are excluded from generated applications.
 
 ### Removing documents
 

@@ -59,7 +59,8 @@ On Windows create the environment with `py -3.13 -m venv .venv` and use
 aspire stop --non-interactive --apphost apphost.mts
 ```
 
-The graph is `frontend (Vite) -> backend (Uvicorn/Quart) -> Storage, Search, OpenAI`.
+The graph is `frontend (Vite) -> backend (Uvicorn/Quart) -> Storage, Search, OpenAI`,
+plus an explicitly started `ingest` Python job targeting the same Azure resources.
 Resource references and waits make the dependencies visible in the dashboard.
 The backend uses `CHAT_URI` from the chat deployment reference as the Azure OpenAI
 endpoint. Azure's endpoint hostname can differ from the resource name; do not
@@ -98,7 +99,30 @@ Python reload and Vite HMR are enabled. Changing AppHost/configuration requires 
 
 ## Ingest documents explicitly
 
-After authorized provisioning, copy `.env.example` to `.env` for the standalone
+After authorized provisioning, start **ingest** from the Aspire dashboard, or from
+another terminal at the application root:
+
+```sh
+aspire resource ingest start --apphost apphost.mts
+aspire logs ingest --apphost apphost.mts
+```
+
+The resource waits for the backend to be healthy so its shared Python environment
+and dependencies are ready. It uploads `data/`, creates/populates `gptkbindex`, uses
+local PDF/HTML parsing and real embeddings, and exits when finished. It receives
+Storage, Search and OpenAI settings directly from AppHost outputs and ignores `.env`.
+Wait for a terminal state (such as **Finished**) with **exit code 0**, not just a
+successful Start command.
+The first ingestion can take tens of minutes with low embedding quotas; watch its
+console logs and prepare data before presenting the demo.
+
+`ingest` uses `withExplicitStart()`: app startup/restart does not run it or trigger
+paid embedding calls. Start it explicitly after a restart when new/changed data needs
+uploading. Reruns skip unchanged files; hashes are recorded only after successful
+processing so failed files can be retried. The backend/frontend remain available
+while ingestion runs, but sample questions need the corresponding documents indexed.
+
+For a standalone utility invocation instead, copy `.env.example` to `.env` for the
 ingestion utility and fill in the actual Storage, Search and OpenAI account names
 from the provisioned resources. Set `AZURE_OPENAI_ENDPOINT` to the actual endpoint
 shown as `CHAT_URI` in the backend resource's environment in the Aspire dashboard,
@@ -117,7 +141,7 @@ additional arguments. Local PDF/HTML parsing is enabled in `.env.example`; it av
 Document Intelligence but can lose advanced layout/image extraction. For full extraction
 provide `AZURE_DOCUMENTINTELLIGENCE_SERVICE` and disable the corresponding local parser.
 Embeddings still call a real model. Use a fresh index/container for experiments.
-The script can create/update an index and upload content; it never runs automatically.
+Both paths can create/update an index and upload content; neither runs automatically.
 Wait for ingestion to finish successfully before asking the sample questions.
 Resource-group/subscription values are optional for this local ingestion path;
 Azure CLI supplies the signed-in identity.

@@ -36,8 +36,18 @@ Change the resource declarations in `apphost.mts`, not a set of provider environ
 Open the frontend URL in the Aspire dashboard. No frontend build is required for development.
 **Before asking the sample questions, [ingest the sample documents](docs/localdev.md#ingest-documents-explicitly).**
 Provisioning creates the Search service, not the `gptkbindex` index or its contents.
-Ingestion is a separate, explicitly authorized step that uploads documents and calls the
-embedding model; chat cannot retrieve documents until it completes.
+Start the **ingest** resource in the dashboard, or run this from another terminal:
+
+```sh
+aspire resource ingest start --apphost apphost.mts
+aspire logs ingest --apphost apphost.mts
+```
+
+Wait for `ingest` to exit successfully before chatting. It uses the AppHost's Azure
+resources, with no `.env` setup. Ingestion uploads documents and calls the embedding
+model, so it requires explicit authorization and never starts automatically.
+Prepare data before a demo: initial PDF ingestion can take tens of minutes at low
+embedding quotas; subsequent runs skip successfully indexed, unchanged files.
 See [local development](docs/localdev.md) for prerequisites, permissions, ingestion,
 authentication, troubleshooting, and the limits of health checks.
 

@@ -6,7 +6,7 @@ Keep these instructions current when changing code or development processes.
 ## Layout
 
 * `apphost.mts`: TypeScript AppHost for Azure Storage, Search, OpenAI deployments,
-  backend and frontend, dynamic endpoints, health checks and dependencies.
+  backend/frontend and explicitly started `ingest`, dynamic endpoints and health checks.
 * `aspire.config.json`: SDK/integration versions and dashboard profiles.
 * `.template.config`: unpacked .NET engine template and Aspire CLI host metadata.
 * `app/backend`: Python Quart API. `approaches` implements RAG; Jinja2 prompts are
@@ -39,6 +39,9 @@ AppHost and wire their outputs to consumers. Do not restore `.env` loading, prov
 selection, environment forwarding loops or a second configuration validator there.
 Standalone ingestion/admin utilities may use `.env`; the application entry point
 does not load it. Mark any explicitly added credential parameter secret.
+The `ingest` resource receives AppHost outputs and uses `--no-env-file`. It shares
+the backend's Python environment and waits for the backend before manual Start.
+Do not make ingestion automatic: it mutates Azure data and calls a paid model.
 There is no AZD state or provisioning workflow.
 
 AppHost startup can provision real Azure services and role assignments. Do not start

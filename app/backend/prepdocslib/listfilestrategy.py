@@ -105,7 +105,13 @@ class LocalListFileStrategy(ListFileStrategy):
         acls = {"oids": ["all"], "groups": ["all"]} if self.enable_global_documents else {}
         async for path in self.list_paths():
             if not self.check_md5(path):
-                yield File(content=open(path, mode="rb"), acls=acls, url=path)
+                file = File(content=open(path, mode="rb"), acls=acls, url=path)
+                file_hash = hashlib.md5(file.content.read()).hexdigest()
+                file.content.seek(0)
+                yield file
+                # The consumer resumes this generator only after processing succeeds.
+                with open(f"{path}.md5", "w", encoding="utf-8") as md5_f:
+                    md5_f.write(file_hash)
 
     def check_md5(self, path: str) -> bool:
         # if filename ends in .md5 skip
@@ -124,9 +130,5 @@ class LocalListFileStrategy(ListFileStrategy):
         if stored_hash and stored_hash.strip() == existing_hash.strip():
             logger.info("Skipping '%s', no changes detected.", path)
             return True
-
-        # Write the hash
-        with open(hash_path, "w", encoding="utf-8") as md5_f:
-            md5_f.write(existing_hash)
 
         return False
