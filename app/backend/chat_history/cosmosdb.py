@@ -3,7 +3,7 @@ import time
 from typing import Any
 
 from azure.cosmos.aio import ContainerProxy, CosmosClient
-from azure.identity.aio import AzureDeveloperCliCredential, ManagedIdentityCredential
+from azure.identity.aio import AzureCliCredential, ManagedIdentityCredential
 from quart import Blueprint, current_app, jsonify, make_response, request
 
 from config import (
@@ -209,7 +209,7 @@ async def setup_clients():
     AZURE_CHAT_HISTORY_DATABASE = os.getenv("AZURE_CHAT_HISTORY_DATABASE")
     AZURE_CHAT_HISTORY_CONTAINER = os.getenv("AZURE_CHAT_HISTORY_CONTAINER")
 
-    azure_credential: AzureDeveloperCliCredential | ManagedIdentityCredential = current_app.config[CONFIG_CREDENTIAL]
+    azure_credential: AzureCliCredential | ManagedIdentityCredential = current_app.config[CONFIG_CREDENTIAL]
 
     if USE_CHAT_HISTORY_COSMOS:
         current_app.logger.info("USE_CHAT_HISTORY_COSMOS is true, setting up CosmosDB client")

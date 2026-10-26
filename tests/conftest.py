@@ -517,7 +517,7 @@ def mock_env(monkeypatch, request):
         if os.getenv("AZURE_USE_AUTHENTICATION") is not None:
             monkeypatch.delenv("AZURE_USE_AUTHENTICATION")
 
-        with mock.patch("app.AzureDeveloperCliCredential") as mock_default_azure_credential:
+        with mock.patch("app.AzureCliCredential") as mock_default_azure_credential:
             mock_default_azure_credential.return_value = MockAzureCredential()
             yield
 
@@ -541,7 +541,7 @@ def mock_reasoning_env(monkeypatch, request):
         for key, value in request.param.items():
             monkeypatch.setenv(key, value)
 
-        with mock.patch("app.AzureDeveloperCliCredential") as mock_default_azure_credential:
+        with mock.patch("app.AzureCliCredential") as mock_default_azure_credential:
             mock_default_azure_credential.return_value = MockAzureCredential()
             yield
 
@@ -568,7 +568,7 @@ def mock_knowledgebase_env(monkeypatch, request):
         for key, value in request.param.items():
             monkeypatch.setenv(key, value)
 
-        with mock.patch("app.AzureDeveloperCliCredential") as mock_default_azure_credential:
+        with mock.patch("app.AzureCliCredential") as mock_default_azure_credential:
             mock_default_azure_credential.return_value = MockAzureCredential()
             yield
 
@@ -592,7 +592,7 @@ def mock_knowledgebase_auth_env(monkeypatch, request):
         for key, value in request.param.items():
             monkeypatch.setenv(key, value)
 
-        with mock.patch("app.AzureDeveloperCliCredential") as mock_default_azure_credential:
+        with mock.patch("app.AzureCliCredential") as mock_default_azure_credential:
             mock_default_azure_credential.return_value = MockAzureCredential()
             yield
 
@@ -611,7 +611,7 @@ def mock_vision_env(monkeypatch, request):
         for key, value in request.param.items():
             monkeypatch.setenv(key, value)
 
-        with mock.patch("app.AzureDeveloperCliCredential") as mock_default_azure_credential:
+        with mock.patch("app.AzureCliCredential") as mock_default_azure_credential:
             mock_default_azure_credential.return_value = MockAzureCredential()
             yield
 
@@ -630,7 +630,7 @@ def mock_vision_auth_env(monkeypatch, request):
         for key, value in request.param.items():
             monkeypatch.setenv(key, value)
 
-        with mock.patch("app.AzureDeveloperCliCredential") as mock_default_azure_credential:
+        with mock.patch("app.AzureCliCredential") as mock_default_azure_credential:
             mock_default_azure_credential.return_value = MockAzureCredential()
             yield
 
@@ -763,7 +763,7 @@ async def auth_client(
     for key, value in request.param.items():
         monkeypatch.setenv(key, value)
 
-    with mock.patch("app.AzureDeveloperCliCredential") as mock_default_azure_credential:
+    with mock.patch("app.AzureCliCredential") as mock_default_azure_credential:
         mock_default_azure_credential.return_value = MockAzureCredential()
         quart_app = app.create_app()
 
@@ -807,7 +807,7 @@ async def auth_public_documents_client(
     for key, value in request.param.items():
         monkeypatch.setenv(key, value)
 
-    with mock.patch("app.AzureDeveloperCliCredential") as mock_default_azure_credential:
+    with mock.patch("app.AzureCliCredential") as mock_default_azure_credential:
         mock_default_azure_credential.return_value = MockAzureCredential()
         quart_app = app.create_app()
 

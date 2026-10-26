@@ -5,6 +5,7 @@ from typing import Optional
 from unittest import mock
 
 import pytest
+from dotenv import dotenv_values
 from kiota_abstractions.api_error import APIError
 from msgraph import GraphServiceClient
 from msgraph.generated.models.application import Application
@@ -22,6 +23,16 @@ from scripts.auth_init import (
     server_app_initial,
     server_app_permission_setup,
 )
+
+
+def test_update_env_persists_without_shell(monkeypatch, tmp_path):
+    monkeypatch.setattr(auth_init, "__file__", str(tmp_path / "scripts" / "auth_init.py"))
+    monkeypatch.setenv("AZURE_SERVER_APP_SECRET", "original")
+    value = "secret with 'quotes' and $(shell syntax)"
+    auth_init.update_env("AZURE_SERVER_APP_SECRET", value)
+    assert dotenv_values(tmp_path / ".env")["AZURE_SERVER_APP_SECRET"] == value
+    assert os.environ["AZURE_SERVER_APP_SECRET"] == value
+
 
 MOCK_OBJECT_ID = "OBJ123"
 MOCK_APP_ID = "APP123"
@@ -192,7 +203,7 @@ async def test_create_or_update_application_creates_and_adds_secret(graph_client
 
     # Ensure env vars not set
     with mock.patch.dict(os.environ, {}, clear=True):
-        monkeypatch.setattr(auth_init, "update_azd_env", fake_update_env)
+        monkeypatch.setattr(auth_init, "update_env", fake_update_env)
 
         # Force get_application to return None (not found)
         async def fake_get_application(graph_client, client_id):
@@ -222,7 +233,7 @@ async def test_create_or_update_application_existing_adds_secret(graph_client, m
         updates.append((name, val))
 
     with mock.patch.dict(os.environ, {"AZURE_SERVER_APP_ID": MOCK_APP_ID}, clear=True):
-        monkeypatch.setattr(auth_init, "update_azd_env", fake_update_env)
+        monkeypatch.setattr(auth_init, "update_env", fake_update_env)
 
         async def fake_get_application(graph_client, client_id):
             return EXISTING_MOCK_OBJECT_ID
@@ -283,7 +294,7 @@ async def test_create_or_update_application_recreates_with_stale_secret(graph_cl
     with mock.patch.dict(
         os.environ, {"AZURE_SERVER_APP_ID": "DELETED_APP", "AZURE_SERVER_APP_SECRET": "STALE"}, clear=True
     ):
-        monkeypatch.setattr(auth_init, "update_azd_env", fake_update_env)
+        monkeypatch.setattr(auth_init, "update_env", fake_update_env)
 
         # get_application returns None for the deleted app id -> triggers create path
         async def fake_get_application(graph_client, client_id):

@@ -48,7 +48,7 @@ Technology comparison:
 | Frontend | React (TypeScript) | React (TypeScript) |
 | Backend | Python (Quart) | Node.js (TypeScript) |
 | Database | Azure AI Search | Azure AI Search |
-| Deployment | Azure Developer CLI (azd) | Azure Developer CLI (azd) |
+| Deployment | Aspire inner loop (deployment pending) | Azure Developer CLI (azd) |
 
 ## sample-app-aoai-chatGPT
 
@@ -82,4 +82,4 @@ Technology comparison:
 | Frontend | React | React |
 | Backend | Python (Quart) | Python (Quart) |
 | Vector DB | Azure AI Search | Azure AI Search, CosmosDB Mongo vCore, ElasticSearch, Pinecone, AzureML |
-| Deployment | Azure Developer CLI (azd) | Azure Portal, az, azd |
+| Deployment | Aspire inner loop (deployment pending) | Azure Portal, az, azd |

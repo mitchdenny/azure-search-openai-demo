@@ -194,8 +194,7 @@ async def test_migrate_cosmosdb_data(monkeypatch):
             mock_migrator.close.assert_called_once()
 
 
-@pytest.mark.parametrize(("loading_mode", "expected_override"), [("override", True), ("no-override", False)])
-def test_main_honors_azd_env_loading_mode(monkeypatch, loading_mode, expected_override):
+def test_main_preserves_environment(monkeypatch):
     calls = []
 
     def mock_asyncio_run(coro):
@@ -203,14 +202,13 @@ def test_main_honors_azd_env_loading_mode(monkeypatch, loading_mode, expected_ov
         assert coro.cr_code.co_name == "migrate_cosmosdb_data"
         coro.close()
 
-    load_azd_env = MagicMock(side_effect=lambda **kwargs: calls.append("load"))
-    monkeypatch.setenv("LOADING_MODE_FOR_AZD_ENV_VARS", loading_mode)
+    load_dotenv = MagicMock(side_effect=lambda **kwargs: calls.append("load"))
 
     with (
-        patch("dotenv_azd.load_azd_env", load_azd_env),
+        patch("dotenv.load_dotenv", load_dotenv),
         patch("asyncio.run", side_effect=mock_asyncio_run),
     ):
         runpy.run_path(cosmosdb_migration.__file__, run_name="__main__")
 
-    load_azd_env.assert_called_once_with(override=expected_override)
+    load_dotenv.assert_called_once_with(override=False)
     assert calls == ["load", "run"]

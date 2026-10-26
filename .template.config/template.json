@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Azure Samples contributors and Mitch Denny",
+  "classifications": ["Aspire", "AI", "Python", "React"],
+  "identity": "SearchOpenAI.Aspire",
+  "name": "SearchOpenAI - Azure RAG with Aspire",
+  "shortName": "aspire-search-openai",
+  "sourceName": "SearchOpenAI",
+  "preferNameDirectory": true,
+  "tags": { "language": "TypeScript", "type": "project" },
+  "sources": [
+    {
+      "source": "./",
+      "target": "./",
+      "exclude": [
+        ".template.config/**", "**/.git/**", "**/.git",
+        "**/node_modules/**", "**/.venv/**", "**/venv/**", "**/.evalenv/**",
+        "**/.aspire/**", ".agents/**", "**/__pycache__/**",
+        "**/.pytest_cache/**", "**/.ruff_cache/**", "**/.ty_cache/**",
+        "**/bin/**", "**/obj/**", "**/dist/**", "**/build/**",
+        "**/static/**", "**/.env", "**/.env.*", "**/*.md5",
+        "**/.coverage*", "**/coverage.xml", "**/cov_annotate/**",
+        "**/test-results/**", "**/.DS_Store",
+        "app/functions/*/prepdocslib/**", "app/functions/*/requirements.txt",
+        "evals/results/**", "evals/results_multimodal/**", "evals/safety_results.json"
+      ]
+    },
+    { "source": "./", "target": "./", "include": [".env.example"], "exclude": [] }
+  ],
+  "symbols": {
+    "AspireVersion": {
+      "type": "parameter", "datatype": "string", "defaultValue": "13.6.4",
+      "replaces": "13.6.4",
+      "replacementContexts": [{ "before": "\"sdk\":\\s*\\{\\s*\"version\":\\s*\"", "after": "\"" }]
+    },
+    "PythonIntegrationVersion": {
+      "type": "parameter", "datatype": "string", "defaultValue": "13.6.4",
+      "replaces": "13.6.4",
+      "replacementContexts": [{ "before": "\"Aspire.Hosting.Python\": \"", "after": "\"" }]
+    },
+    "JavaScriptIntegrationVersion": {
+      "type": "parameter", "datatype": "string", "defaultValue": "13.6.4",
+      "replaces": "13.6.4",
+      "replacementContexts": [{ "before": "\"Aspire.Hosting.JavaScript\": \"", "after": "\"" }]
+    },
+    "DashboardHttpsPort": {
+      "type": "generated", "generator": "port", "replaces": "17183",
+      "parameters": { "low": 17000, "high": 17999 }
+    },
+    "DashboardHttpPort": {
+      "type": "generated", "generator": "port", "replaces": "15174",
+      "parameters": { "low": 15000, "high": 15999 }
+    },
+    "DashboardOtlpPort": {
+      "type": "generated", "generator": "port", "replaces": "21297",
+      "parameters": { "low": 21000, "high": 21999 }
+    },
+    "ResourceServicePort": {
+      "type": "generated", "generator": "port", "replaces": "22060",
+      "parameters": { "low": 22000, "high": 22999 }
+    }
+  }
+}

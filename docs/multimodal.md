@@ -17,21 +17,28 @@ With this feature enabled, the following changes are made:
 
 ## Prerequisites
 
-* The use of a model that supports multimodal inputs. The default model for the repository is currently `gpt-5.4-mini`, which does support multimodal inputs. If you change the model, make sure the new model also supports multimodal inputs (e.g. `gpt-5.2`, `gpt-5-mini`, `gpt-4.1-mini`).
+* Use an existing model deployment that supports multimodal inputs, such as
+  `gpt-4.1-mini`. Match `AZURE_OPENAI_CHATGPT_MODEL` to the deployed model.
 
-## Deployment
+## Configuration
+
+Put the settings below in root `.env` and restart the AppHost after changes.
 
 1. **Enable multimodal capabilities**
 
-   Set the azd environment variable to enable the multimodal feature:
+   Set the environment variable to enable the multimodal feature:
 
    ```shell
-   azd env set USE_MULTIMODAL true
+   USE_MULTIMODAL=true
    ```
 
 2. **Provision the multimodal resources**
 
-   Either run `azd up` if you haven't run it before, or run `azd provision` to provision the multimodal resources. This will create a new Azure AI Vision account and update the Azure AI Search index to include the new image embedding field.
+   Supply existing Azure AI Vision (`AZURE_VISION_ENDPOINT`), Document Intelligence
+   (`AZURE_DOCUMENTINTELLIGENCE_SERVICE`) and image Storage
+   (`AZURE_IMAGESTORAGE_CONTAINER`) resources. Disable local PDF parsing for figure
+   extraction. Aspire does not provision these resources. Authorized ingestion
+   creates/updates the Search schema with image fields.
 
 3. **Re-index the data:**
 
@@ -39,7 +46,7 @@ With this feature enabled, the following changes are made:
    We recommend creating a new Azure AI Search index to avoid conflicts with the existing index.
 
    ```shell
-   azd env set AZURE_SEARCH_INDEX multimodal-index
+   AZURE_SEARCH_INDEX=multimodal-index
    ```
 
    Then delete the `.md5` hash files in the data folder(s) and run the data ingestion process again to re-index the data:
@@ -79,13 +86,13 @@ By default, it will retrieve using both text and image embeddings.
 To disable retrieval with text embeddings, run:
 
 ```shell
-azd env set RAG_SEARCH_TEXT_EMBEDDINGS false
+RAG_SEARCH_TEXT_EMBEDDINGS=false
 ```
 
 To disable retrieval with image embeddings, run:
 
 ```shell
-azd env set RAG_SEARCH_IMAGE_EMBEDDINGS false
+RAG_SEARCH_IMAGE_EMBEDDINGS=false
 ```
 
 Many developers may find that they can turn off image embeddings and still have high quality retrieval, since the text embeddings are based off text chunks that include figure descriptions.
@@ -97,13 +104,13 @@ Set variables to control whether the LLM will use text inputs, image inputs, or 
 To disable text inputs, run:
 
 ```shell
-azd env set RAG_SEND_TEXT_SOURCES false
+RAG_SEND_TEXT_SOURCES=false
 ```
 
 To disable image inputs, run:
 
 ```shell
-azd env set RAG_SEND_IMAGE_SOURCES false
+RAG_SEND_IMAGE_SOURCES=false
 ```
 
 It is unlikely that you would want to turn off text sources, unless your RAG is based on documents that are 100% image-based.

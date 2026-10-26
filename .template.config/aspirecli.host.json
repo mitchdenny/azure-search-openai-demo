@@ -1,0 +1,21 @@
+{
+  "symbolInfo": {
+    "AspireVersion": { "isHidden": true },
+    "PythonIntegrationVersion": {
+      "valueSource": {
+        "kind": "nugetPackageVersion",
+        "packageId": "Aspire.Hosting.Python",
+        "versionRange": "*-*",
+        "allowPrerelease": true
+      }
+    },
+    "JavaScriptIntegrationVersion": {
+      "valueSource": {
+        "kind": "nugetPackageVersion",
+        "packageId": "Aspire.Hosting.JavaScript",
+        "versionRange": "*-*",
+        "allowPrerelease": true
+      }
+    }
+  }
+}

@@ -18,7 +18,7 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 - [Running E2E tests](#running-e2e-tests)
 - [Code style](#code-style)
 - [Adding new features](#adding-new-features)
-  - [Adding new azd environment variables](#adding-new-azd-environment-variables)
+  - [Adding environment variables](#adding-environment-variables)
   - [Adding new UI strings](#adding-new-ui-strings)
 
 ## Submitting a Pull Request (PR)
@@ -40,8 +40,12 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 Install the development dependencies:
 
 ```shell
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -r requirements-dev.txt
 ```
+
+For application startup and Azure prerequisites, use [Aspire local development](docs/localdev.md).
 
 Install the pre-commit hooks:
 
@@ -102,7 +106,7 @@ You can also use the online trace viewer at <https://trace.playwright.dev/>
 
 ## Code style
 
-This codebase includes several languages: TypeScript, Python, Bicep, Powershell, and Bash.
+This codebase includes TypeScript, Python, PowerShell, and Bash.
 Code should follow the standard conventions of each language.
 
 For Python, you can enforce the conventions using `ruff` and `black`.
@@ -135,14 +139,12 @@ that instructs Copilot (and other coding agents) about how to generate code for 
 
 If you are not using Copilot Agent mode, consult both that file and suggestions below.
 
-### Adding new azd environment variables
+### Adding environment variables
 
-When adding new azd environment variables, please remember to update:
-
-1. [main.parameters.json](./infra/main.parameters.json)
-1. [appEnvVariables in main.bicep](./infra/main.bicep)
-1. [ADO pipeline](.azdo/pipelines/azure-dev.yml).
-1. [Github workflows](.github/workflows/azure-dev.yml)
+Document new settings in `.env.example` and the relevant feature guide.
+Ensure `apphost.mts` forwards them as parameters (mark credentials secret), and
+read them in the relevant backend or ingestion helper. Shell/Aspire values must
+take precedence over `.env`. Do not add AZD state or deployment hooks.
 
 ### Adding new UI strings
 

@@ -6,14 +6,14 @@ This script verifies that ACL filtering is working and tests elevated read acces
 import asyncio
 import os
 
-from azure.identity.aio import AzureDeveloperCliCredential
+from azure.identity.aio import AzureCliCredential
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
-from dotenv_azd import load_azd_env
+from dotenv import load_dotenv
 
 
 async def main():
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     tenant_id = os.environ["AZURE_TENANT_ID"]
     search_service = os.environ["AZURE_SEARCH_SERVICE"]
@@ -22,8 +22,8 @@ async def main():
     search_endpoint = f"https://{search_service}.search.windows.net"
 
     # Get credential
-    print(f"Setting up Azure credential using AzureDeveloperCliCredential with tenant_id {tenant_id}")
-    credential = AzureDeveloperCliCredential(tenant_id=tenant_id)
+    print(f"Setting up Azure credential using AzureCliCredential with tenant_id {tenant_id}")
+    credential = AzureCliCredential(tenant_id=tenant_id)
 
     # Get user token for ACL filtering (no "Bearer " prefix needed)
     token = await credential.get_token("https://search.azure.com/.default")

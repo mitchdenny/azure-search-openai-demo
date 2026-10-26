@@ -157,9 +157,8 @@ async def test_adls_gen2_create_group(
     assert await command.create_or_get_group("GROUP_C") == "GROUP_C_ID_CREATED"
 
 
-@pytest.mark.parametrize(("loading_mode", "expected_override"), [("override", True), ("no-override", False)])
 @pytest.mark.asyncio
-async def test_main_honors_azd_env_loading_mode(monkeypatch, tmp_path, loading_mode, expected_override):
+async def test_main_preserves_environment(monkeypatch, tmp_path):
     data_access_control = tmp_path / "data-access-control.json"
     data_access_control.write_text(json.dumps(valid_data_access_control_format))
     args = SimpleNamespace(
@@ -167,21 +166,20 @@ async def test_main_honors_azd_env_loading_mode(monkeypatch, tmp_path, loading_m
         data_directory="/data",
         create_security_enabled_groups=True,
     )
-    load_azd_env = MagicMock()
+    load_dotenv = MagicMock()
     command = MagicMock()
     command.run = AsyncMock()
     setup_class = MagicMock(return_value=command)
     credential = MockAzureCredential()
 
-    monkeypatch.setenv("LOADING_MODE_FOR_AZD_ENV_VARS", loading_mode)
     monkeypatch.setenv("AZURE_ADLS_GEN2_STORAGE_ACCOUNT", "storage-account")
-    monkeypatch.setattr(adlsgen2setup, "load_azd_env", load_azd_env)
-    monkeypatch.setattr(adlsgen2setup, "AzureDeveloperCliCredential", lambda: credential)
+    monkeypatch.setattr(adlsgen2setup, "load_dotenv", load_dotenv)
+    monkeypatch.setattr(adlsgen2setup, "AzureCliCredential", lambda: credential)
     monkeypatch.setattr(adlsgen2setup, "AdlsGen2Setup", setup_class)
 
     await adlsgen2setup.main(args)
 
-    load_azd_env.assert_called_once_with(override=expected_override)
+    load_dotenv.assert_called_once_with(override=False)
     setup_class.assert_called_once_with(
         data_directory="/data",
         storage_account_name="storage-account",

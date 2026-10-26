@@ -1,6 +1,9 @@
 # RAG chat: Using reasoning models
 
-The default model for this repository is gpt-5.4-mini, a reasoning model. Reasoning models spend more time processing and understanding the user's request, leading to higher quality responses. To use this feature, ensure you are deploying a reasoning model, like the gpt-5 series, which is the current default. To switch to a different GPT-5 reasoning model, follow the steps in [Using different chat models](./deploy_features.md#using-different-chat-models).
+Reasoning models spend more time processing the user's request. To use this feature,
+configure an existing GPT-5-family deployment using `AZURE_OPENAI_CHATGPT_DEPLOYMENT`
+and its matching `AZURE_OPENAI_CHATGPT_MODEL` in root `.env`. The example configuration
+uses `gpt-4.1-mini`, not a reasoning model. Aspire does not deploy models.
 
 ## Supported models
 
@@ -15,12 +18,12 @@ We support the GPT-5 model family, but not the earlier o-series models, due to A
    Set the environment variable for reasoning effort:
 
    ```shell
-   azd env set AZURE_OPENAI_REASONING_EFFORT medium
+   AZURE_OPENAI_REASONING_EFFORT=medium
    ```
 
 2. **Update the infrastructure and application:**
 
-   Execute `azd up` to provision any infrastructure changes (like a changed model) and deploy the application code with the updated environment variables.
+   Put the setting in `.env` and restart the AppHost to apply it.
 
 3. **Try out the feature:**
 

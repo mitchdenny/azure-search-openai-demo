@@ -8,14 +8,15 @@
             "nodeGypDependencies": false
         },
         "ghcr.io/devcontainers/features/azure-cli:1.2.5": {},
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-        "ghcr.io/azure/azure-dev/azd:latest": {}
+        "ghcr.io/devcontainers/features/dotnet:2": {
+            "version": "10.0"
+        },
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
     },
     "customizations": {
         "vscode": {
             "extensions": [
-                "ms-azuretools.azure-dev",
-                "ms-azuretools.vscode-bicep",
+                "ms-dotnettools.vscode-aspire",
                 "ms-python.python",
                 "astral-sh.ty",
                 "esbenp.prettier-vscode",
@@ -26,7 +27,7 @@
     "forwardPorts": [
         50505
     ],
-    "postCreateCommand": "",
+    "postCreateCommand": "dotnet tool install --global Aspire.Cli --version 13.6.4",
     "remoteUser": "vscode",
     "hostRequirements": {
         "memory": "8gb"

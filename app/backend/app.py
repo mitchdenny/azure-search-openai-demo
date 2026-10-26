@@ -17,7 +17,7 @@ from azure.cognitiveservices.speech import (
     SpeechSynthesizer,
 )
 from azure.identity.aio import (
-    AzureDeveloperCliCredential,
+    AzureCliCredential,
     ManagedIdentityCredential,
     get_bearer_token_provider,
 )
@@ -115,6 +115,13 @@ mimetypes.add_type("text/css", ".css")
 @bp.route("/")
 async def index():
     return await bp.send_static_file("index.html")
+
+
+@bp.route("/health")
+async def health():
+    # Quart serves requests only after setup_clients completes. This checks the
+    # process, not Azure connectivity, and must never issue billable model calls.
+    return jsonify({"status": "ready"})
 
 
 # Dedicated MSAL popup-redirect page. Per MSAL best practice this must be a
@@ -478,13 +485,12 @@ async def setup_clients():
     if USE_SHAREPOINT_SOURCE and not AZURE_ENFORCE_ACCESS_CONTROL:
         current_app.logger.warning("AZURE_ENFORCE_ACCESS_CONTROL must be true when USE_SHAREPOINT_SOURCE is true")
 
-    # WEBSITE_HOSTNAME is always set by App Service, RUNNING_IN_PRODUCTION is set in main.bicep
+    # WEBSITE_HOSTNAME is always set by App Service, RUNNING_IN_PRODUCTION is set by the deployed host
     RUNNING_ON_AZURE = os.getenv("WEBSITE_HOSTNAME") is not None or os.getenv("RUNNING_IN_PRODUCTION") is not None
 
     # Use the current user identity for keyless authentication to Azure services.
-    # This assumes you use 'azd auth login' locally, and managed identity when deployed on Azure.
-    # The managed identity is setup in the infra/ folder.
-    azure_credential: AzureDeveloperCliCredential | ManagedIdentityCredential
+    # Authenticate locally with 'az login'; deployed hosts use managed identity.
+    azure_credential: AzureCliCredential | ManagedIdentityCredential
     azure_ai_token_provider: Callable[[], Awaitable[str]]
     if RUNNING_ON_AZURE:
         current_app.logger.info("Setting up Azure credential using ManagedIdentityCredential")
@@ -500,12 +506,12 @@ async def setup_clients():
             azure_credential = ManagedIdentityCredential()
     elif AZURE_TENANT_ID:
         current_app.logger.info(
-            "Setting up Azure credential using AzureDeveloperCliCredential with tenant_id %s", AZURE_TENANT_ID
+            "Setting up Azure credential using AzureCliCredential with tenant_id %s", AZURE_TENANT_ID
         )
-        azure_credential = AzureDeveloperCliCredential(tenant_id=AZURE_TENANT_ID, process_timeout=60)
+        azure_credential = AzureCliCredential(tenant_id=AZURE_TENANT_ID, process_timeout=60)
     else:
-        current_app.logger.info("Setting up Azure credential using AzureDeveloperCliCredential for home tenant")
-        azure_credential = AzureDeveloperCliCredential(process_timeout=60)
+        current_app.logger.info("Setting up Azure credential using AzureCliCredential for home tenant")
+        azure_credential = AzureCliCredential(process_timeout=60)
     azure_ai_token_provider = get_bearer_token_provider(
         azure_credential, "https://cognitiveservices.azure.com/.default"
     )
@@ -769,6 +775,20 @@ def create_app():
                 "fastapi": {"enabled": False},
             }
         )
+    elif os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+            OTLPSpanExporter,
+        )
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+        provider = TracerProvider(resource=Resource.create())
+        provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+        trace.set_tracer_provider(provider)
+
+    if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT"):
         # This tracks HTTP requests made by aiohttp:
         AioHttpClientInstrumentor().instrument()
         # This tracks HTTP requests made by httpx:

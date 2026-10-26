@@ -5,14 +5,12 @@ on:
     branches: [ main ]
     paths-ignore:
       - "**.md"
-      - ".azdo/**"
       - ".devcontainer/**"
       - ".github/**"
   pull_request:
     branches: [ main ]
     paths-ignore:
       - "**.md"
-      - ".azdo/**"
       - ".devcontainer/**"
       - ".github/**"
   workflow_call:

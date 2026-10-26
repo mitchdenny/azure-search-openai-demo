@@ -57,5 +57,5 @@ For each recommended issue closure, provide:
 - Deployment failures from early 2023 that were fixed by infrastructure improvements
 - Cross-platform compatibility issues resolved by script migrations
 - API errors from old library versions that have been updated
-- Configuration issues resolved by azd template redesigns
+- Configuration issues resolved by Aspire template redesigns
 - Authentication/permissions errors fixed by improved role assignment logic

@@ -7,12 +7,12 @@ from typing import Any, Optional
 
 import aiohttp
 from azure.core.credentials_async import AsyncTokenCredential
-from azure.identity.aio import AzureDeveloperCliCredential
+from azure.identity.aio import AzureCliCredential
 from azure.storage.filedatalake.aio import (
     DataLakeDirectoryClient,
     DataLakeServiceClient,
 )
-from dotenv_azd import load_azd_env
+from dotenv import load_dotenv
 
 logger = logging.getLogger("scripts")
 
@@ -154,12 +154,12 @@ class AdlsGen2Setup:
 
 
 async def main(args: Any):
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     if not os.getenv("AZURE_ADLS_GEN2_STORAGE_ACCOUNT"):
         raise Exception("AZURE_ADLS_GEN2_STORAGE_ACCOUNT must be set to continue")
 
-    async with AzureDeveloperCliCredential() as credentials:
+    async with AzureCliCredential() as credentials:
         with open(args.data_access_control) as f:
             data_access_control_format = json.load(f)
         command = AdlsGen2Setup(

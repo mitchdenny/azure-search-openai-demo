@@ -18,9 +18,10 @@ opentelemetry-instrumentation-asgi
 opentelemetry-instrumentation-httpx
 opentelemetry-instrumentation-aiohttp-client
 opentelemetry-instrumentation-openai
+opentelemetry-exporter-otlp-proto-grpc
 msal
 cryptography
-dotenv-azd
+python-dotenv
 PyJWT
 Pillow
 types-Pillow

@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from azure.core.credentials import AzureKeyCredential
 from azure.core.credentials_async import AsyncTokenCredential
-from azure.identity.aio import AzureDeveloperCliCredential
+from azure.identity.aio import AzureCliCredential
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.indexes.aio import SearchIndexClient
 from azure.search.documents.indexes.models import (
@@ -18,7 +18,7 @@ from azure.search.documents.indexes.models import (
     SearchFieldDataType,
     SearchIndexPermissionFilterOption,
 )
-from dotenv_azd import load_azd_env
+from dotenv import load_dotenv
 
 logger = logging.getLogger("scripts")
 
@@ -257,15 +257,15 @@ class ManageAcl:
 
 
 async def main(args: Any):
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     # Use the current user identity to connect to Azure services unless a key is explicitly set for any of them
-    azd_credential = (
-        AzureDeveloperCliCredential()
+    azure_credential = (
+        AzureCliCredential()
         if args.tenant_id is None
-        else AzureDeveloperCliCredential(tenant_id=args.tenant_id, process_timeout=60)
+        else AzureCliCredential(tenant_id=args.tenant_id, process_timeout=60)
     )
-    search_credential: AsyncTokenCredential | AzureKeyCredential = azd_credential
+    search_credential: AsyncTokenCredential | AzureKeyCredential = azure_credential
     if args.search_key is not None:
         search_credential = AzureKeyCredential(args.search_key)
 

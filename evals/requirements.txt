@@ -1,4 +1,4 @@
-dotenv-azd==0.3.0
+python-dotenv==1.2.2
 rich
 ragas==0.2.13
 rapidfuzz==3.14.3

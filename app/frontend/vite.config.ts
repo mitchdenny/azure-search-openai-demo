@@ -28,7 +28,7 @@ const redirectAlias: Plugin = {
 // https://vitejs.dev/config/
 export default defineConfig(() => {
     const backendPort = process.env.BACKEND_PORT || "50505";
-    const backendUrl = `http://localhost:${backendPort}`;
+    const backendUrl = process.env.BACKEND_URL || `http://localhost:${backendPort}`;
     return {
         plugins: [react(), redirectAlias],
         resolve: {

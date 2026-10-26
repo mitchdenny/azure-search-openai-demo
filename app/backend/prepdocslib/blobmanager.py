@@ -448,7 +448,7 @@ class BlobManager(BaseBlobManager):
     ) -> Optional[str]:
         if self.image_container is None:
             raise ValueError(
-                "Image container name is not set. Re-run `azd provision` to automatically set up the images container."
+                "Image container name is not set. Configure AZURE_IMAGESTORAGE_CONTAINER with an existing container."
             )
         if user_oid is not None:
             raise ValueError(

@@ -70,6 +70,13 @@ async def test_missing_env_vars():
 
 
 @pytest.mark.asyncio
+async def test_health(client):
+    response = await client.get("/health")
+    assert response.status_code == 200
+    assert await response.get_json() == {"status": "ready"}
+
+
+@pytest.mark.asyncio
 async def test_index(client):
     response = await client.get("/")
     assert response.status_code == 200

@@ -6,8 +6,8 @@ from typing import Optional
 
 import aiohttp
 from azure.core.credentials_async import AsyncTokenCredential
-from azure.identity.aio import AzureDeveloperCliCredential
-from dotenv_azd import load_azd_env
+from azure.identity.aio import AzureCliCredential
+from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from rich.logging import RichHandler
 
@@ -159,7 +159,7 @@ if __name__ == "__main__":  # pragma: no cover
         # to avoid seeing the noisy INFO level logs from the Azure SDKs
         logger.setLevel(logging.DEBUG)
 
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     if os.getenv("USE_CLOUD_INGESTION", "").lower() == "true":
         logger.warning(
@@ -189,13 +189,13 @@ if __name__ == "__main__":  # pragma: no cover
     # `... or "0"` treats an empty-string env var (common in CI substitution) as unset.
     csv_max_chars_per_page = int(os.getenv("CSV_MAX_PAGE_CHARS") or "0") or None
 
-    # Use the current user identity to connect to Azure services. See infra/main.bicep for role assignments.
+    # Use the current user identity to connect to Azure services. See docs/localdev.md for required role assignments.
     if tenant_id := os.getenv("AZURE_TENANT_ID"):
-        logger.info("Connecting to Azure services using the azd credential for tenant %s", tenant_id)
-        azd_credential = AzureDeveloperCliCredential(tenant_id=tenant_id, process_timeout=60)
+        logger.info("Connecting to Azure services using the Azure CLI credential for tenant %s", tenant_id)
+        azure_credential = AzureCliCredential(tenant_id=tenant_id, process_timeout=60)
     else:
-        logger.info("Connecting to Azure services using the azd credential for home tenant")
-        azd_credential = AzureDeveloperCliCredential(process_timeout=60)
+        logger.info("Connecting to Azure services using the Azure CLI credential for home tenant")
+        azure_credential = AzureCliCredential(process_timeout=60)
 
     if args.removeall:
         document_action = DocumentAction.RemoveAll
@@ -221,7 +221,7 @@ if __name__ == "__main__":  # pragma: no cover
         azure_openai_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
         azure_openai_knowledgebase_deployment=os.getenv("AZURE_OPENAI_KNOWLEDGEBASE_DEPLOYMENT"),
         azure_openai_knowledgebase_model=os.getenv("AZURE_OPENAI_KNOWLEDGEBASE_MODEL"),
-        azure_credential=azd_credential,
+        azure_credential=azure_credential,
         search_key=clean_key_if_exists(args.searchkey),
         azure_vision_endpoint=os.getenv("AZURE_VISION_ENDPOINT"),
     )
@@ -243,7 +243,7 @@ if __name__ == "__main__":  # pragma: no cover
         exit(1)
 
     blob_manager = setup_blob_manager(
-        azure_credential=azd_credential,
+        azure_credential=azure_credential,
         storage_account=os.environ["AZURE_STORAGE_ACCOUNT"],
         storage_container=os.environ["AZURE_STORAGE_CONTAINER"],
         storage_resource_group=os.environ["AZURE_STORAGE_RESOURCE_GROUP"],
@@ -252,7 +252,7 @@ if __name__ == "__main__":  # pragma: no cover
         image_storage_container=os.environ.get("AZURE_IMAGESTORAGE_CONTAINER"),  # Pass the image container
     )
     list_file_strategy = setup_list_file_strategy(
-        azure_credential=azd_credential,
+        azure_credential=azure_credential,
         local_files=args.files,
         enable_global_documents=enable_global_documents,
     )
@@ -263,7 +263,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     openai_client, azure_openai_endpoint = setup_openai_client(
         openai_host=OPENAI_HOST,
-        azure_credential=azd_credential,
+        azure_credential=azure_credential,
         azure_openai_service=os.getenv("AZURE_OPENAI_SERVICE"),
         azure_openai_custom_url=os.getenv("AZURE_OPENAI_CUSTOM_URL"),
         azure_openai_api_key=os.getenv("AZURE_OPENAI_API_KEY_OVERRIDE"),
@@ -303,7 +303,7 @@ if __name__ == "__main__":  # pragma: no cover
         )
     else:
         file_processors, figure_processor = setup_file_processors(
-            azure_credential=azd_credential,
+            azure_credential=azure_credential,
             document_intelligence_service=os.getenv("AZURE_DOCUMENTINTELLIGENCE_SERVICE"),
             document_intelligence_key=clean_key_if_exists(args.documentintelligencekey),
             local_pdf_parser=os.getenv("USE_LOCAL_PDF_PARSER") == "true",
@@ -319,7 +319,7 @@ if __name__ == "__main__":  # pragma: no cover
         )
 
         image_embeddings_service = setup_image_embeddings_service(
-            azure_credential=azd_credential,
+            azure_credential=azure_credential,
             vision_endpoint=os.getenv("AZURE_VISION_ENDPOINT"),
             use_multimodal=use_multimodal,
         )
@@ -350,7 +350,7 @@ if __name__ == "__main__":  # pragma: no cover
         try:
             loop.run_until_complete(blob_manager.close_clients())
             loop.run_until_complete(openai_client.close())
-            loop.run_until_complete(azd_credential.close())
+            loop.run_until_complete(azure_credential.close())
         except Exception as e:
             logger.debug(f"Failed to close async clients cleanly: {e}")
         loop.close()

@@ -3,11 +3,8 @@ This script ensures that the latest version of the prepdocslib library used
 by backend ingestion is copied into each of the Azure Function apps that
 also rely on this library.
 
-As an azd prepackage hook, azd sets the CWD to the service project directory
-and runs the per-service hooks in parallel. When the CWD is one of the
-function directories, only that function is synced — this avoids races
-between parallel hook invocations. Otherwise all function directories are
-synced.
+When the CWD is one of the function directories, only that function is
+synced. Otherwise all function directories are synced.
 
 Steps:
 1. Copy `prepdocslib` into each function directory.

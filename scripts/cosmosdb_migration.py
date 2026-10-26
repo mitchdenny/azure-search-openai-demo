@@ -30,8 +30,8 @@ response: dict
 import os
 
 from azure.cosmos.aio import CosmosClient
-from azure.identity.aio import AzureDeveloperCliCredential
-from dotenv_azd import load_azd_env
+from azure.identity.aio import AzureCliCredential
+from dotenv import load_dotenv
 
 
 class CosmosDBMigrator:
@@ -46,11 +46,11 @@ class CosmosDBMigrator:
         Args:
             cosmos_account: CosmosDB account name
             database_name: Database name
-            credential: Azure credential, defaults to AzureDeveloperCliCredential
+            credential: Azure credential, defaults to AzureCliCredential
         """
         self.cosmos_account = cosmos_account
         self.database_name = database_name
-        self.credential = credential or AzureDeveloperCliCredential()
+        self.credential = credential or AzureCliCredential()
         self.client = None
         self.database = None
         self.old_container = None
@@ -154,7 +154,7 @@ async def migrate_cosmosdb_data():
 
 
 if __name__ == "__main__":
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     import asyncio
 

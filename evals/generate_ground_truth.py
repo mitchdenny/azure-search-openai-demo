@@ -5,9 +5,9 @@ import os
 import pathlib
 import re
 
-from azure.identity import AzureDeveloperCliCredential, get_bearer_token_provider
+from azure.identity import AzureCliCredential, get_bearer_token_provider
 from azure.search.documents import SearchClient
-from dotenv_azd import load_azd_env
+from dotenv import load_dotenv
 from langchain_core.documents import Document as LCDocument
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from ragas.embeddings import LangchainEmbeddingsWrapper
@@ -25,11 +25,11 @@ root_dir = pathlib.Path(__file__).parent
 def get_azure_credential():
     AZURE_TENANT_ID = os.getenv("AZURE_TENANT_ID")
     if AZURE_TENANT_ID:
-        logger.info("Setting up Azure credential using AzureDeveloperCliCredential with tenant_id %s", AZURE_TENANT_ID)
-        azure_credential = AzureDeveloperCliCredential(tenant_id=AZURE_TENANT_ID, process_timeout=60)
+        logger.info("Setting up Azure credential using AzureCliCredential with tenant_id %s", AZURE_TENANT_ID)
+        azure_credential = AzureCliCredential(tenant_id=AZURE_TENANT_ID, process_timeout=60)
     else:
-        logger.info("Setting up Azure credential using AzureDeveloperCliCredential for home tenant")
-        azure_credential = AzureDeveloperCliCredential(process_timeout=60)
+        logger.info("Setting up Azure credential using AzureCliCredential for home tenant")
+        azure_credential = AzureCliCredential(process_timeout=60)
     return azure_credential
 
 
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         level=logging.WARNING, format="%(message)s", datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)]
     )
     logger.setLevel(logging.INFO)
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     parser = argparse.ArgumentParser(description="Generate ground truth data using AI Search index and RAGAS.")
     parser.add_argument("--numsearchdocs", type=int, help="Specify the number of search results to fetch")

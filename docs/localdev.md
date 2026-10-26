@@ -1,190 +1,122 @@
-# RAG chat: Local development of chat app
+# Local development with Aspire
 
-After deploying the app to Azure, you may want to continue development locally. This guide explains how to run the app locally, including hot reloading and debugging.
+## External prerequisites
 
-* [Running development server from the command line](#running-development-server-from-the-command-line)
-* [Hot reloading frontend and backend files](#hot-reloading-frontend-and-backend-files)
-* [Using VS Code "Development" task](#using-vs-code-development-task)
-* [Using Copilot Chat Debug Mode](#using-copilot-chat-debug-mode)
-* [Using VS Code "Run and Debug"](#using-vs-code-run-and-debug)
-* [Using a local OpenAI-compatible API](#using-a-local-openai-compatible-api)
-  * [Using Ollama server](#using-ollama-server)
-  * [Using llamafile server](#using-llamafile-server)
+The default app requires an existing Azure AI Search service and populated index,
+Blob Storage account/container holding the cited source files, an Azure OpenAI chat
+deployment, and an embedding deployment matching the index's model and dimensions.
+Supply their names in root `.env` using [.env.example](../.env.example).
+No services are provisioned by startup. There is no AI Search emulator, and an empty
+index cannot answer sample questions. Model calls and ingestion can incur charges.
 
-## Running development server from the command line
+For keyless access, run `az login` (optionally `--tenant <tenant-id>`).
+The backend and utilities use `AzureCliCredential` locally and the backend keeps
+`ManagedIdentityCredential` when `RUNNING_IN_PRODUCTION` or `WEBSITE_HOSTNAME` is set.
+An administrator must grant the appropriate access separately: Search Index Data Reader
+for queries, Storage Blob Data Reader for citations, and Cognitive Services OpenAI User
+for models. Ingestion additionally needs Search Service Contributor, Search Index Data
+Contributor, and Storage Blob Data Contributor. Optional services need their own roles.
+Do not run role-assignment or app-registration utilities without authorization.
 
-You can only run locally **after** having successfully run the `azd up` command. If you haven't yet, follow the steps in [Azure deployment](../README.md#azure-deployment) above.
+`.env` is ignored by Git and excluded from template output. Existing process environment
+values override it, including values supplied by Aspire. Never put credentials in
+`aspire.config.json`, command-line arguments, or committed files.
 
-1. Run `azd auth login`
-2. Start the server:
+Optional configurations retain their original names: `OPENAI_HOST` (`azure`,
+`azure_custom`, `openai`, `local`), `AZURE_OPENAI_CUSTOM_URL`, `OPENAI_API_KEY`,
+`AZURE_OPENAI_API_KEY_OVERRIDE`, `USE_VECTORS`, `USE_MULTIMODAL`, `USE_USER_UPLOAD`,
+`USE_CHAT_HISTORY_COSMOS`, speech, agentic retrieval, and authentication settings.
+Local/OpenAI model endpoints do not remove the Search/Blob dependencies.
+Missing required configuration produces an explicit AppHost startup error.
 
-  Windows:
+## Setup and lifecycle
 
-  ```shell
-  ./app/start.ps1
-  ```
+From the repository or generated application's root:
 
-  Linux/Mac:
-
-  ```shell
-  ./app/start.sh
-  ```
-
-  VS Code: Run the "VS Code Task: Start App" task.
-
-## Hot reloading frontend and backend files
-
-When you run `./start.ps1` or `./start.sh`, the backend files will be watched and reloaded automatically. However, the frontend files will not be watched and reloaded automatically.
-
-To enable hot reloading of frontend files, open a new terminal and navigate to the frontend directory:
-
-```shell
-cd app/frontend
+```sh
+npm ci
+python3 -m venv .venv
+.venv/bin/python -m pip install -r app/backend/requirements.txt
+npm --prefix app/frontend ci
+cp .env.example .env
+# Edit .env with your existing resources. Never paste secrets into logs.
+az login
+aspire restore
+aspire start --non-interactive --isolated --apphost apphost.mts
+aspire wait backend --apphost apphost.mts
+aspire wait frontend --apphost apphost.mts
+aspire describe --apphost apphost.mts
 ```
 
-Then run:
+On Windows use `.venv\Scripts\python.exe` and `Copy-Item`. Alternatively use foreground
+`aspire run --isolated --apphost apphost.mts`. Stop only this app:
 
-```shell
-npm run dev
+```sh
+aspire stop --non-interactive --apphost apphost.mts
 ```
 
-You should see:
+The graph is `frontend (Vite) -> backend (Uvicorn/Quart) -> existing Azure services`.
+Configuration appears as AppHost parameters; keys, secrets and connection strings are
+marked secret. AppHost/frontend use their own npm lockfiles. Python uses the pinned
+backend requirements and root `.venv`; Aspire's pip setup and npm install resources
+ensure dependencies are present. Run the explicit setup first for reproducible installs.
+If you create `.venv` with `uv venv`, use `uv venv --seed` so the environment contains
+the `pip` executable required by Aspire's pip installer.
+Do not edit generated `.aspire/modules`.
 
-```shell
-> frontend@0.0.0 dev
-> vite
+Vite and Uvicorn ports are assigned by Aspire. Vite receives `BACKEND_URL` from the
+backend endpoint and proxies API requests, preserving one browser origin for authentication,
+uploads and citations. Both services use loopback HTTP locally. The dashboard has its own
+HTTPS configuration; generated copies receive new dashboard ports. In the same source
+checkout, dashboard profile ports can be adjusted in `aspire.config.json` if necessary.
+Python reload and Vite HMR are enabled. Changing AppHost/configuration requires restarting it.
 
+## Ingest documents explicitly
 
-  VITE v4.5.1  ready in 957 ms
+With Azure access and model usage authorized:
 
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
-  ➜  press h to show help
+```sh
+.venv/bin/python app/backend/prepdocs.py 'data/*' --verbose
 ```
 
-Navigate to the URL shown in the terminal (in this case, `http://localhost:5173/`).  This local server will watch and reload frontend files. All backend requests will be routed to the Python server according to `vite.config.ts`.
+The shell/PowerShell `scripts/prepdocs` wrappers run the same command and preserve
+additional arguments. Local PDF/HTML parsing is enabled in `.env.example`; it avoids
+Document Intelligence but can lose advanced layout/image extraction. For full extraction
+provide `AZURE_DOCUMENTINTELLIGENCE_SERVICE` and disable the corresponding local parser.
+Embeddings still call a real model. Use a fresh index/container for experiments.
+The script can create/update an index and upload content; it never runs automatically.
+MD5 sidecars are shared across configurations, so remove only the relevant `data/*.md5`
+files when deliberately ingesting unchanged documents into a new target.
+See [ingestion architecture and options](data_ingestion.md).
 
-Then, whenever you make changes to frontend files, the changes will be automatically reloaded, without any browser refresh needed.
+Cloud ingestion remains optional: configure separately deployed Functions, run
+`python scripts/copy_prepdocslib.py`, and invoke
+`python app/backend/setup_cloud_ingestion.py` explicitly with the necessary environment.
+The AppHost does not provision or host those Functions.
 
-Alternatively, you can start both servers with hot reloading by using the VS Code "Development" task. See [Using VS Code "Development" task](#using-vs-code-development-task).
+## Verification and limits
 
-## Using VS Code "Development" task
+`/health` reports process readiness after Quart client initialization. `/config`
+and `/auth_setup` can confirm frontend proxying without model usage.
+**Healthy does not mean Azure credentials, index contents, or models have been tested.**
+With approved real configuration, ask a question about the ingested sample documents,
+confirm streamed answer text and citations, and open a citation to check Blob access.
+Do not claim functional RAG verification from a rendered UI or a mocked test.
+See [authentication](login_and_acl.md) for separate Entra/OBO verification.
 
-If you prefer VS Code tasks for hot reloading both servers at once, use the "Development" task defined in `.vscode/tasks.json`.
+## Tests
 
-How to run it:
-
-* Run Build Task (Shift+Cmd+B) to start the default build task, which is "Development".
-* Or open the Command Palette (Shift+Cmd+P) and run: "Tasks: Run Task" -> "Development".
-
-What it does:
-
-* Starts two background tasks in dedicated panels:
-  * "Frontend: npm run dev" from `app/frontend` (Vite HMR for instant frontend updates)
-  * "Backend: quart run" from `app/backend` (Quart with `--reload` for backend auto-restarts)
-
-Readiness indicators:
-
-* Frontend is ready when Vite prints a Local URL, for example: `Local: http://localhost:5173/`.
-* Backend is ready when Hypercorn reports: `Running on http://127.0.0.1:50505` (port may vary).
-
-Tips:
-
-* To stop both, run: "Tasks: Terminate Task" and pick the running tasks.
-* If watchers stall, terminate and run "Development" again.
-* Frontend changes apply via HMR; backend Python changes auto-reload. No manual restart needed.
-
-## Using Copilot Chat Debug Mode
-
-You can use GitHub Copilot Chat with a custom "debug" mode to streamline troubleshooting in this repo.
-
-Prerequisites:
-
-* VS Code 1.101+ (custom chat modes are in preview)
-* Access to GitHub Copilot and Copilot Chat
-* Playwright MCP server and GitHub MCP server (optional)
-
-To learn more about the chat modes feature, read [VS Code docs for Chat modes](https://code.visualstudio.com/docs/copilot/chat/chat-modes).
-
-To use the debug mode:
-
-* Open the Chat view.
-* Use the chat mode dropdown at the top of the Chat view to select the "debug" mode.
-* Start chatting in that mode; the instructions and tools from the repo file will be applied automatically.
-* The mode will use the tasks from .vscode/tasks.json to run the frontend and backend server, and should be able to read any errors in the output.
-* The mode may also use tools from the Playwright MCP server and GitHub MCP server, if those servers are installed in your VS Code.
-
-Notably, this mode will not actually use a breakpoint-based debugger. Read on to learn how to use breakpoints while debugging the Python code.
-
-## Using VS Code "Run and Debug"
-
-This project includes configurations defined in `.vscode/launch.json` that allow you to run and debug the app directly from VS Code:
-
-* "Backend (Python)": Starts the Python backend server, defaulting to port 50505.
-* "Frontend": Starts the frontend server using Vite, typically at port 5173.
-* "Frontend & Backend": A compound configuration that starts both the frontend and backend servers.
-
-When you run these configurations, you can set breakpoints in your code and debug as you would in a normal VS Code debugging session.
-
-## Using a local OpenAI-compatible API
-
-You may want to save costs by developing against a local LLM server, such as
-[llamafile](https://github.com/Mozilla-Ocho/llamafile/). Note that a local LLM
-will generally be slower and not as sophisticated.
-
-Once the local LLM server is running and serving an OpenAI-compatible endpoint, set these environment variables:
-
-```shell
-azd env set USE_VECTORS false
-azd env set OPENAI_HOST local
-azd env set OPENAI_BASE_URL <your local endpoint>
-azd env set AZURE_OPENAI_CHATGPT_MODEL local-model-name
+```sh
+source .venv/bin/activate
+uv pip install -r requirements-dev.txt
+npm --prefix app/frontend run build
+pytest tests/
+ruff check .
+ty check
+npm run build
 ```
 
-Then restart the local development server.
-You should now be able to use the "Ask" tab.
-
-⚠️ Limitations:
-
-* The "Chat" tab will only work if the local language model supports function calling.
-* Your search mode must be text only (no vectors), since the search index is only populated with OpenAI-generated embeddings, and the local OpenAI host can't generate those.
-* The conversation history will be truncated using the GPT tokenizers, which may not be the same as the local model's tokenizer, so if you have a long conversation, you may end up with token limit errors.
-
-> [!NOTE]
-> You must set `OPENAI_HOST` back to a non-local value ("azure", "azure_custom", or "openai")
-> before running `azd up` or `azd provision`, since the deployed backend can't access your local server.
-
-### Using Ollama server
-
-For example, to point at a local Ollama server running the `llama3.1:8b` model:
-
-```shell
-azd env set OPENAI_HOST local
-azd env set OPENAI_BASE_URL http://localhost:11434/v1
-azd env set AZURE_OPENAI_CHATGPT_MODEL llama3.1:8b
-azd env set USE_VECTORS false
-```
-
-If you're running the app inside a VS Code Dev Container, use this local URL instead:
-
-```shell
-azd env set OPENAI_BASE_URL http://host.docker.internal:11434/v1
-```
-
-### Using llamafile server
-
-To point at a local llamafile server running on its default port:
-
-```shell
-azd env set OPENAI_HOST local
-azd env set OPENAI_BASE_URL http://localhost:8080/v1
-azd env set USE_VECTORS false
-```
-
-Llamafile does *not* require a model name to be specified.
-
-If you're running the app inside a VS Code Dev Container, use this local URL instead:
-
-```shell
-azd env set OPENAI_BASE_URL http://host.docker.internal:8080/v1
-```
+Tests mock external Azure services. E2E tests additionally require Playwright Chromium:
+`playwright install chromium` then `pytest tests/e2e.py`. Build the frontend first
+because these tests serve its compiled assets from Quart. Live model/Entra validation
+is a separate authorized step, not part of the mocked suite.

@@ -102,7 +102,12 @@ If multimodal is enabled, that document will also include an `"images"` field an
 
 ## Local ingestion
 
-The [`prepdocs.py`](../app/backend/prepdocs.py) script is responsible for both uploading and indexing documents. The typical usage is to call it using `scripts/prepdocs.sh` (Mac/Linux) or `scripts/prepdocs.ps1` (Windows), as these scripts will set up a Python virtual environment and pass in the required parameters based on the current `azd` environment. You can pass additional arguments directly to the script, for example `scripts/prepdocs.ps1 --removeall`. Whenever `azd up` or `azd provision` is run, the script is called automatically.
+The [`prepdocs.py`](../app/backend/prepdocs.py) script uploads and indexes documents.
+Complete the virtual-environment setup in [local development](localdev.md) first.
+Run `scripts/prepdocs.sh` (Mac/Linux), `scripts/prepdocs.ps1` (Windows), or the Python
+script directly. Configuration comes from root `.env`, with process values taking
+precedence. Additional arguments are forwarded. Ingestion mutates Search/Storage
+and may incur model charges; it is never run automatically by Aspire.
 
 ![Diagram of the indexing process](images/diagram_prepdocs.png)
 
@@ -139,33 +144,16 @@ This project includes an optional feature to perform data ingestion in the cloud
 
 ### Enabling cloud ingestion
 
-1. If you've previously deployed, delete the existing search index or create a new index. This feature cannot be used on existing index. In the newly created index schema, a new field 'parent_id' is added. This is used internally by the indexer to manage life cycle of chunks. Run this command to set a new index name:
-
-    ```shell
-    azd env set AZURE_SEARCH_INDEX cloudindex
-    ```
-
-2. Run this command:
-
-    ```shell
-    azd env set USE_CLOUD_INGESTION true
-    ```
-
-3. (Recommended) Increase the capacity for the embedding model to the maximum quota allowed for your region/subscription, so that the Azure Functions can generate embeddings without hitting rate limits:
-
-    ```shell
-    azd env set AZURE_OPENAI_EMB_DEPLOYMENT_CAPACITY 400
-    ```
-
-4. Provision the new Azure Functions resources, deploy the function apps, and update the search indexer with:
-
-    ```shell
-    azd up
-    ```
-
-5. That will upload the documents in the `data/` folder to the Blob storage container, create the indexer and skillset, and run the indexer to ingest the data. You can monitor the indexer status from the portal.
-
-6. When you have new documents to ingest, you can upload documents to the Blob storage container and run the indexer from the Azure Portal to ingest new documents.
+Cloud ingestion requires separately provisioned/deployed Azure Functions and their
+skill endpoints, Search, Storage, model quota and managed-identity permissions.
+This template does not provision/deploy that infrastructure. Preserve the Function
+source by running `python scripts/copy_prepdocslib.py` before packaging it separately.
+Use a fresh index: cloud ingestion adds `parent_id` for chunk lifecycle management.
+Set `AZURE_SEARCH_INDEX=cloudindex`, `USE_CLOUD_INGESTION=true`, and the required
+Function/service settings in root `.env`, then, when authorized, run
+`python app/backend/setup_cloud_ingestion.py` to upload documents and configure/run
+the indexer. Monitor it in Azure Portal. New source documents can then be uploaded
+to the container and ingested by running the indexer.
 
 ### Indexer architecture
 
@@ -184,12 +172,12 @@ The cloud ingestion pipeline uses four Azure Functions as custom skills within a
 
 The functions are defined in the `app/functions/` directory, and the custom skillset is configured in the `app/backend/setup_cloud_ingestion.py` script.
 
-#### [Document Extractor Function](app/functions/document_extractor/)
+#### [Document Extractor Function](../app/functions/document_extractor/)
 
 - Implements the [document extraction](#document-extraction) stage
 - Emits markdown text with `<figure id="...">` placeholders and figure metadata
 
-#### [Figure Processor Function](app/functions/figure_processor/)
+#### [Figure Processor Function](../app/functions/figure_processor/)
 
 - Implements the [figure processing](#figure-processing) stage
 - Emits enriched figure metadata with descriptions, URLs, and embeddings
@@ -204,7 +192,7 @@ The functions are defined in the `app/functions/` directory, and the custom skil
   - File metadata (file_name, storageUrl)
 - Creates a `consolidated_document` object that the text processor can consume
 
-#### [Text Processor Function](app/functions/text_processor/)
+#### [Text Processor Function](../app/functions/text_processor/)
 
 - Implements the [text processing](#text-processing) stage (figure merging, chunking, embedding)
 - Receives the consolidated document with enriched figures from the Shaper skill

@@ -2,12 +2,12 @@ import asyncio
 import datetime
 import os
 import random
-import subprocess
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 
-from azure.identity.aio import AzureDeveloperCliCredential
-from dotenv_azd import load_azd_env
+from azure.identity.aio import AzureCliCredential
+from dotenv import load_dotenv, set_key
 from kiota_abstractions.api_error import APIError
 from kiota_abstractions.base_request_configuration import RequestConfiguration
 from msgraph import GraphServiceClient
@@ -75,19 +75,22 @@ async def create_or_update_application_with_secret(
     else:
         print("Creating application registration")
         object_id, app_id = await create_application(graph_client, request_app)
-        update_azd_env(app_id_env_var, app_id)
+        update_env(app_id_env_var, app_id)
         created_app = True
 
     if object_id and (os.getenv(app_secret_env_var, "no-secret") == "no-secret" or created_app):
         print(f"Adding client secret to {app_id}")
         client_secret = await add_client_secret(graph_client, object_id)
-        update_azd_env(app_secret_env_var, client_secret)
+        update_env(app_secret_env_var, client_secret)
 
     return (object_id, app_id, created_app)
 
 
-def update_azd_env(name, val):
-    subprocess.run(f'azd env set {name} "{val}"', shell=True)
+def update_env(name, val):
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    env_path.touch(mode=0o600, exist_ok=True)
+    set_key(str(env_path), name, val)
+    os.environ[name] = val
 
 
 def random_app_identifier():
@@ -277,7 +280,7 @@ async def grant_application_admin_consent(graph_client: GraphServiceClient, clie
 
 
 async def main():  # pragma: no cover
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     if not test_authentication_enabled():
         print("Not setting up authentication.")
@@ -285,14 +288,12 @@ async def main():  # pragma: no cover
 
     auth_tenant = (os.getenv("AZURE_AUTH_TENANT_ID") or os.getenv("AZURE_TENANT_ID") or "").strip()
     if not auth_tenant:
-        print(
-            "Error: No tenant ID set for authentication. Set AZURE_AUTH_TENANT_ID or AZURE_TENANT_ID in your azd env."
-        )
+        print("Error: No tenant ID set for authentication. Set AZURE_AUTH_TENANT_ID or AZURE_TENANT_ID in .env.")
         exit(1)
     # TODO: Remove assert once ty supports type narrowing from NoReturn calls (astral-sh/ty#690)
     assert auth_tenant is not None
     print("Setting up authentication for tenant", auth_tenant)
-    credential = AzureDeveloperCliCredential(tenant_id=auth_tenant)
+    credential = AzureCliCredential(tenant_id=auth_tenant)
 
     scopes = ["https://graph.microsoft.com/.default"]
     graph_client = GraphServiceClient(credentials=credential, scopes=scopes)

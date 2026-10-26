@@ -169,7 +169,8 @@ sequenceDiagram
 
 ## Optional Features
 
-The architecture supports several optional features that can be enabled. For detailed configuration instructions, see the [optional features guide](deploy_features.md):
+The architecture supports several optional features. Configure their existing services
+using environment variables as described in [local development](localdev.md):
 
 - **GPT-4 with Vision**: Process image-heavy documents
 - **Speech Services**: Voice input/output capabilities
@@ -177,11 +178,11 @@ The architecture supports several optional features that can be enabled. For det
 - **Authentication**: User login and access control
 - **Private Endpoints**: Network isolation for enhanced security
 
-## Deployment Options
+## Aspire orchestration
 
-The application can be deployed using:
-
-- **Azure Container Apps** (default): Serverless container hosting
-- **Azure App Service**: Traditional PaaS hosting option. See the [App Service hosting guide](appservice.md) for detailed instructions.
-
-Both options support the same feature set and can be configured through the Azure Developer CLI (azd).
+`apphost.mts` runs Vite and Uvicorn/Quart. The frontend references and waits for the
+backend, receives its dynamic HTTP endpoint through `BACKEND_URL`, and proxies API
+requests from the browser's origin. The backend connects to existing Azure services.
+Parameters preserve the application's environment variable names. See
+[local development](localdev.md) for health/telemetry behavior and prerequisites.
+Cloud compute provisioning and `aspire deploy` are future work.

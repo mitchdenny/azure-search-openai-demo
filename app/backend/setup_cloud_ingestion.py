@@ -5,8 +5,8 @@ import logging
 import os
 
 from azure.core.credentials_async import AsyncTokenCredential
-from azure.identity.aio import AzureDeveloperCliCredential
-from dotenv_azd import load_azd_env
+from azure.identity.aio import AzureCliCredential
+from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from rich.logging import RichHandler
 
@@ -152,7 +152,7 @@ async def setup_cloud_ingestion_strategy(
 
 async def main():
     """Main function to setup cloud ingestion."""
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     # Check if cloud ingestion is enabled
     use_cloud_ingestion = os.getenv("USE_CLOUD_INGESTION", "").lower() == "true"
@@ -168,15 +168,15 @@ async def main():
 
     # Use the current user identity to connect to Azure services
     if tenant_id := os.getenv("AZURE_TENANT_ID"):
-        logger.info("Connecting to Azure services using the azd credential for tenant %s", tenant_id)
-        azd_credential = AzureDeveloperCliCredential(tenant_id=tenant_id, process_timeout=60)
+        logger.info("Connecting to Azure services using the Azure CLI credential for tenant %s", tenant_id)
+        azure_credential = AzureCliCredential(tenant_id=tenant_id, process_timeout=60)
     else:
-        logger.info("Connecting to Azure services using the azd credential for home tenant")
-        azd_credential = AzureDeveloperCliCredential(process_timeout=60)
+        logger.info("Connecting to Azure services using the Azure CLI credential for home tenant")
+        azure_credential = AzureCliCredential(process_timeout=60)
 
     try:
         ingestion_strategy, openai_client, credential, blob_manager = await setup_cloud_ingestion_strategy(
-            azure_credential=azd_credential,
+            azure_credential=azure_credential,
             document_action=DocumentAction.Add,
         )
 
@@ -189,7 +189,7 @@ async def main():
     finally:
         await blob_manager.close_clients()
         await openai_client.close()
-        await azd_credential.close()
+        await azure_credential.close()
 
 
 if __name__ == "__main__":

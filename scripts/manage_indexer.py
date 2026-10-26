@@ -14,13 +14,13 @@ import asyncio
 import os
 import sys
 
-from azure.identity.aio import AzureDeveloperCliCredential
+from azure.identity.aio import AzureCliCredential
 from azure.search.documents.indexes.aio import SearchIndexerClient
-from dotenv_azd import load_azd_env
+from dotenv import load_dotenv
 
 
 async def main(action: str) -> None:
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     service = os.environ["AZURE_SEARCH_SERVICE"]
     index_name = os.environ["AZURE_SEARCH_INDEX"]
@@ -29,13 +29,11 @@ async def main(action: str) -> None:
     endpoint = f"https://{service}.search.windows.net"
     tenant_id = os.environ.get("AZURE_TENANT_ID")
 
-    azd_credential = (
-        AzureDeveloperCliCredential()
-        if tenant_id is None
-        else AzureDeveloperCliCredential(tenant_id=tenant_id, process_timeout=60)
+    azure_credential = (
+        AzureCliCredential() if tenant_id is None else AzureCliCredential(tenant_id=tenant_id, process_timeout=60)
     )
 
-    async with azd_credential, SearchIndexerClient(endpoint=endpoint, credential=azd_credential) as client:
+    async with azure_credential, SearchIndexerClient(endpoint=endpoint, credential=azure_credential) as client:
         if action == "reset":
             await client.reset_indexer(indexer_name)
             print(f"reset {indexer_name}")

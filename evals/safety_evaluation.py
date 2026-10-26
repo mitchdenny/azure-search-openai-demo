@@ -13,8 +13,8 @@ from azure.ai.evaluation.simulator import (
     AdversarialSimulator,
     SupportedLanguages,
 )
-from azure.identity import AzureDeveloperCliCredential
-from dotenv_azd import load_azd_env
+from azure.identity import AzureCliCredential
+from dotenv import load_dotenv
 from rich.logging import RichHandler
 from rich.progress import track
 
@@ -50,11 +50,11 @@ class HarmSeverityLevel(Enum):
 def get_azure_credential():
     AZURE_TENANT_ID = os.getenv("AZURE_TENANT_ID")
     if AZURE_TENANT_ID:
-        logger.info("Setting up Azure credential using AzureDeveloperCliCredential with tenant_id %s", AZURE_TENANT_ID)
-        azure_credential = AzureDeveloperCliCredential(tenant_id=AZURE_TENANT_ID, process_timeout=60)
+        logger.info("Setting up Azure credential using AzureCliCredential with tenant_id %s", AZURE_TENANT_ID)
+        azure_credential = AzureCliCredential(tenant_id=AZURE_TENANT_ID, process_timeout=60)
     else:
-        logger.info("Setting up Azure credential using AzureDeveloperCliCredential for home tenant")
-        azure_credential = AzureDeveloperCliCredential(process_timeout=60)
+        logger.info("Setting up Azure credential using AzureCliCredential for home tenant")
+        azure_credential = AzureCliCredential(process_timeout=60)
     return azure_credential
 
 
@@ -68,8 +68,8 @@ def get_azure_ai_project() -> str:
     project_endpoint = os.getenv("FOUNDRY_PROJECT_ENDPOINT")
     if not project_endpoint:
         raise ValueError(
-            "FOUNDRY_PROJECT_ENDPOINT is not set. Deploy the app with azd so that a Microsoft "
-            "Foundry project is provisioned, or run 'azd env refresh' to populate the .env file."
+            "FOUNDRY_PROJECT_ENDPOINT is not set. Configure an existing Microsoft "
+            "Foundry project endpoint in .env or the process environment."
         )
 
     location = os.getenv("AZURE_OPENAI_LOCATION", "")
@@ -192,6 +192,6 @@ if __name__ == "__main__":
         level=logging.WARNING, format="%(message)s", datefmt="[%X]", handlers=[RichHandler(rich_tracebacks=True)]
     )
     logger.setLevel(logging.INFO)
-    load_azd_env(override=os.getenv("LOADING_MODE_FOR_AZD_ENV_VARS") != "no-override")
+    load_dotenv(override=False)
 
     asyncio.run(run_simulator(args.target_url, args.max_simulations))
