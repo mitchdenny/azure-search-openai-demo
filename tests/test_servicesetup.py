@@ -159,6 +159,33 @@ def test_setup_openai_client_azure_constructs_endpoint_correctly(monkeypatch: py
     assert captured_base_url[0] == "https://myopenaiservice.openai.azure.com/openai/v1"
 
 
+@pytest.mark.parametrize("service", [None, "openai-resource"])
+@pytest.mark.parametrize("suffix", ["", "/"])
+def test_setup_openai_client_azure_uses_provisioned_endpoint(
+    monkeypatch: pytest.MonkeyPatch, service: str | None, suffix: str
+) -> None:
+    captured_base_url: list[str] = []
+
+    class StubAsyncOpenAI:
+        def __init__(self, *, base_url: str, api_key, **kwargs) -> None:
+            captured_base_url.append(base_url)
+
+    monkeypatch.setattr("prepdocslib.servicesetup.AsyncOpenAI", StubAsyncOpenAI)
+    monkeypatch.setattr(
+        "prepdocslib.servicesetup.get_bearer_token_provider", lambda *args, **kwargs: lambda: "fake_token"
+    )
+
+    _, endpoint = setup_openai_client(
+        openai_host=OpenAIHost.AZURE,
+        azure_credential=MockAzureCredential(),
+        azure_openai_service=service,
+        azure_openai_endpoint=f"https://openairesource.openai.azure.com{suffix}",
+    )
+
+    assert endpoint == "https://openairesource.openai.azure.com"
+    assert captured_base_url == ["https://openairesource.openai.azure.com/openai/v1"]
+
+
 def test_setup_openai_client_azure_custom_uses_custom_url(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that setup_openai_client uses the custom URL for azure_custom host."""
     captured_base_url: list[str] = []

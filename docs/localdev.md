@@ -39,7 +39,7 @@ From the repository or generated application's root:
 
 ```sh
 npm ci
-python3 -m venv .venv
+python3.13 -m venv .venv
 .venv/bin/python -m pip install --index-url https://pypi.org/simple -r app/backend/requirements.txt
 npm --prefix app/frontend ci
 az login
@@ -51,7 +51,8 @@ aspire wait frontend --apphost apphost.mts
 aspire describe --apphost apphost.mts
 ```
 
-On Windows use `.venv\Scripts\python.exe`. Alternatively use foreground
+On Windows create the environment with `py -3.13 -m venv .venv` and use
+`.venv\Scripts\python.exe`. Alternatively use foreground
 `aspire run --isolated --apphost apphost.mts`. Stop only this app:
 
 ```sh
@@ -60,6 +61,9 @@ aspire stop --non-interactive --apphost apphost.mts
 
 The graph is `frontend (Vite) -> backend (Uvicorn/Quart) -> Storage, Search, OpenAI`.
 Resource references and waits make the dependencies visible in the dashboard.
+The backend uses `CHAT_URI` from the chat deployment reference as the Azure OpenAI
+endpoint. Azure's endpoint hostname can differ from the resource name; do not
+reconstruct it from `AZURE_OPENAI_SERVICE`.
 AppHost/frontend use their own npm lockfiles. Python uses the pinned
 backend requirements and root `.venv`; Aspire's pip setup and npm install resources
 ensure dependencies are present. Run the explicit setup first for reproducible installs.
@@ -68,7 +72,22 @@ rather than an inherited default index that may lag the pinned package versions.
 This does not change machine-wide pip configuration.
 If you create `.venv` with `uv venv`, use `uv venv --seed` so the environment contains
 the `pip` executable required by Aspire's pip installer.
+`.python-version` selects Python 3.13 for uv/pyenv. Aspire requires the environment
+to be created explicitly instead of automatically choosing the system's `python3`.
 Do not edit generated `.aspire/modules`.
+
+### Installer failures after changing Python
+
+Updating the system Python does not update an existing virtual environment.
+Verify `.venv/bin/python --version` (Windows: `.venv\Scripts\python.exe --version`).
+The pinned native dependencies are tested on Python 3.13; on Python 3.15,
+`jiter` and `tiktoken` can fail to build because their PyO3 versions do not support
+that interpreter. Do not bypass PyO3's compatibility checks.
+
+Stop this app before replacing an environment used by running Python resources.
+Move the old `.venv` aside, create a fresh one using the setup commands above, and
+restart the app. Retrying the installer alone does not change its Python interpreter.
+The old environment can be removed after confirming the replacement works.
 
 Vite and Uvicorn ports are assigned by Aspire. Vite receives `BACKEND_URL` from the
 backend endpoint and proxies API requests, preserving one browser origin for authentication,

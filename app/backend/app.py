@@ -601,6 +601,7 @@ async def setup_clients():
         openai_host=OPENAI_HOST,
         azure_credential=azure_credential,
         azure_openai_service=AZURE_OPENAI_SERVICE,
+        azure_openai_endpoint=os.getenv("CHAT_URI"),
         azure_openai_custom_url=AZURE_OPENAI_CUSTOM_URL,
         azure_openai_api_key=AZURE_OPENAI_API_KEY_OVERRIDE,
         openai_api_key=OPENAI_API_KEY,

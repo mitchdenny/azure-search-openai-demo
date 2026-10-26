@@ -40,7 +40,7 @@ Before you submit your Pull Request (PR) consider the following guidelines:
 Install the development dependencies:
 
 ```shell
-python3 -m venv .venv
+python3.13 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements-dev.txt
 ```

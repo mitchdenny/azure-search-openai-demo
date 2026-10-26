@@ -29,6 +29,8 @@ Follow `docs/localdev.md`. Run `aspire restore` then
 a worktree; wait for backend/frontend with `aspire wait`. Stop only the exact
 AppHost you started. Never disturb other apps/worktrees.
 AppHost uses npm (`package-lock.json`); frontend has its own npm lockfile.
+Create root `.venv` with Python 3.13 before startup; Aspire does not create it
+using the system default Python. `.python-version` selects 3.13 for uv/pyenv.
 Never edit generated `.aspire/modules`. Use `aspire add` / `aspire restore`.
 Verify unfamiliar Aspire APIs with docs and generated read-only signatures.
 

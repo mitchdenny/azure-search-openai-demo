@@ -19,7 +19,7 @@ const embeddings = await openai.addDeployment(
 // and proxies API traffic so cookies and the MSAL redirect stay same-origin.
 const backend = await builder
   .addUvicornApp("backend", "./app/backend", "main:app")
-  .withVirtualEnvironment("../../.venv")
+  .withVirtualEnvironment("../../.venv", { createIfNotExists: false })
   .withPip({ installArgs: ["--index-url", "https://pypi.org/simple"] })
   .withArgs(["--reload"])
   .withReference(content)

@@ -89,9 +89,9 @@ def setup_openai_client(
     azure_openai_custom_url: Optional[str] = None,
     openai_api_key: Optional[str] = None,
     openai_organization: Optional[str] = None,
+    azure_openai_endpoint: Optional[str] = None,
 ) -> tuple[AsyncOpenAI, Optional[str]]:
     openai_client: AsyncOpenAI
-    azure_openai_endpoint: Optional[str] = None
 
     if openai_host in [OpenAIHost.AZURE, OpenAIHost.AZURE_CUSTOM]:
         base_url: Optional[str] = None
@@ -103,9 +103,11 @@ def setup_openai_client(
             base_url = azure_openai_custom_url
         else:
             logger.info("OPENAI_HOST is azure, setting up Azure OpenAI client")
-            if not azure_openai_service:
-                raise ValueError("AZURE_OPENAI_SERVICE must be set when OPENAI_HOST is azure")
-            azure_openai_endpoint = f"https://{azure_openai_service}.openai.azure.com"
+            if not azure_openai_endpoint:
+                if not azure_openai_service:
+                    raise ValueError("AZURE_OPENAI_SERVICE must be set when OPENAI_HOST is azure")
+                azure_openai_endpoint = f"https://{azure_openai_service}.openai.azure.com"
+            azure_openai_endpoint = azure_openai_endpoint.rstrip("/")
             base_url = f"{azure_openai_endpoint}/openai/v1"
         if azure_openai_api_key:
             logger.info("AZURE_OPENAI_API_KEY_OVERRIDE found, using as api_key for Azure OpenAI client")

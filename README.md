@@ -12,12 +12,12 @@ This is not an offline demo and does not replace real model/retrieval calls with
 
 ## Run locally
 
-Install Aspire 13.6.4+, Node.js 22.13+ (or 24+), Python 3.10+, and Azure CLI.
-Use Python 3.13 for the tested dependency set.
+Install Aspire 13.6.4+, Node.js 22.13+ (or 24+), Python 3.13, and Azure CLI.
+The pinned dependency set is tested with Python 3.13, not arbitrary newer releases.
 
 ```sh
 npm ci
-python3 -m venv .venv
+python3.13 -m venv .venv
 .venv/bin/python -m pip install --index-url https://pypi.org/simple -r app/backend/requirements.txt
 npm --prefix app/frontend ci
 az login
@@ -26,6 +26,9 @@ aspire run --isolated --apphost apphost.mts
 ```
 
 On Windows, use `.venv\Scripts\python.exe`.
+Create the environment with `py -3.13 -m venv .venv` on Windows.
+Aspire uses this pre-created environment; it does not create one with the system's
+default Python. `.python-version` also selects 3.13 for tools such as uv and pyenv.
 Startup uses Aspire's Azure subscription/location configuration and can provision
 billable resources and role assignments. Run it only with authorization.
 The template uses GPT-4.1 mini and text-embedding-3-small (1536 dimensions).
